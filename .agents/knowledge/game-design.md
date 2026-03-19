@@ -1,0 +1,63 @@
+# Game Design
+
+## Concept
+Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **Groom** (top) move toward each other across 9 rows, shooting flying wedding items to buy everything needed for their wedding before they meet in the middle.
+
+## Game Phases
+| Phase | Description |
+|-------|-------------|
+| `title` | Start screen — explains controls + ammo types |
+| `playing` | Main gameplay loop |
+| `meeting` | Players reached the same row → couple image shown, then level result |
+| `levelComplete` | Time ran out with all required items bought → next level |
+| `gameComplete` | All 5 levels cleared |
+| `lost` | Ran out of lives, money went negative, or met without completing requirements |
+
+## Players
+- **Groom** — starts top-right (row 0), moves down. Controls: A/D move, W shoot, S cycle ammo.
+- **Bride** — starts bottom-left (row 8), moves up. Controls: ←/→ move, ↑ shoot, ↓ cycle ammo.
+- Both move one row at a time on a timed `rowAdvanceTimer`.
+
+## Ammo Types
+| Type | Key | Cost | Effect |
+|------|-----|------|--------|
+| 💵 Cash | `cash` | $100/shot (deducted from `money`) | Damages purchasable items (HP = price × priceScale) |
+| 💌 Invite | `invite` | 1 envelope | Hits `guest` items → guest attends, brings $100–$300 random gift |
+| 💕 Heart | `heart` | 1 heart | Hits `parent_bride`/`parent_groom` → family donates $300–$500 random |
+
+## Item Types (defined in `src/constants.js` `WEDDING_ITEMS`)
+| ID | Emoji | Type | Notes |
+|----|-------|------|-------|
+| `rings` | 💍 | purchase (required) | Always required |
+| `officiant` | ⛪ | purchase (required) | Level 2+ |
+| `catering` | 🍽️ | purchase (required) | Level 3+ |
+| `flowers` | 💐 | purchase (optional) | Bride-exclusive |
+| `suit` | 🤵 | purchase (optional) | Groom-exclusive |
+| `cake` | 🎂 | purchase (optional) | Level 4+ |
+| `guest` | 👥 | income (invite ammo) | Gives $100–$300 |
+| `parent_bride` | 👩‍👧 | income (heart ammo) | Bride-exclusive, gives $300–$500 |
+| `parent_groom` | 👨‍👦 | income (heart ammo) | Groom-exclusive, gives $300–$500 |
+| `discount` | 🎀 | discount | Reduces remaining item prices by 30% |
+| `mine` | 💣 | trap | Explodes on contact, costs a life |
+
+## Level Structure (`src/levels.js`)
+5 levels with increasing difficulty:
+
+| Level | Name | Required Items | money | priceScale | itemSpeed | hasMines |
+|-------|------|---------------|-------|-----------|-----------|---------|
+| 1 | Save the Date | rings | $9900 | 0.1× | 0.35 | No |
+| 2 | The Ceremony | rings, officiant | $3000 | 0.4× | 0.9 | No |
+| 3 | The Reception | rings, officiant, catering | $2500 | 0.65× | 1.2 | No |
+| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $2000 | 0.9× | 1.5 | Yes |
+| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1800 | 1.2× | 2.0 | Yes |
+
+## Win / Lose Conditions
+- **Win level**: All `required` items acquired when players meet (or time runs out with money ≥ 0).
+- **Lose**: Lives reach 0, OR players meet without all required items, OR money goes negative.
+- **Starting money must be a multiple of $100** (cash ammo costs $100/shot — leftover cents are unspendable).
+
+## Key Constraints
+- Items spawn on rows between the two players (never on their rows).
+- `exclusiveTo: 'bride'` items can only be shot by bride; `'groom'` items only by groom.
+- Rows advance on `rowAdvanceTimer`; press **N** (when level complete) to fast-forward.
+- `priceScale` multiplies each item's base `price` — e.g., rings at 0.1× cost $50 instead of $500.

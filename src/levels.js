@@ -18,7 +18,7 @@ export const LEVELS = [
     optional:     ['guest', 'cake', 'parent_bride', 'parent_groom'],
     money:        9900,   // multiple of $100
     priceScale:   0.1,    // rings cost $50 — one cash shot buys it
-    itemSpeed:    0.35,   // very slow
+    itemSpeed:    1.5,    // snappy intro pace
     rowAdvance:   60,     // rows advance once per minute
     gameDuration: 300,    // 5 minutes — no pressure
     invites:      12,
@@ -33,7 +33,7 @@ export const LEVELS = [
     optional:     ['guest', 'suit', 'flowers', 'parent_bride', 'parent_groom'],
     money:        3000,
     priceScale:   0.4,
-    itemSpeed:    0.9,
+    itemSpeed:    2.0,
     rowAdvance:   30,
     gameDuration: 150,
     invites:      10,
@@ -48,7 +48,7 @@ export const LEVELS = [
     optional:     ['guest', 'suit', 'flowers', 'cake', 'parent_bride', 'parent_groom'],
     money:        2500,
     priceScale:   0.65,
-    itemSpeed:    1.2,
+    itemSpeed:    2.5,
     rowAdvance:   24,
     gameDuration: 110,
     invites:      10,
@@ -63,7 +63,7 @@ export const LEVELS = [
     optional:     ['guest', 'parent_bride', 'parent_groom', 'cake', 'discount'],
     money:        2000,
     priceScale:   0.9,
-    itemSpeed:    1.5,
+    itemSpeed:    3.0,
     rowAdvance:   20,
     gameDuration: 95,
     invites:      12,
@@ -78,7 +78,7 @@ export const LEVELS = [
     optional:     ['guest', 'parent_bride', 'parent_groom', 'discount'],
     money:        1800,
     priceScale:   1.2,
-    itemSpeed:    2.0,
+    itemSpeed:    3.5,
     rowAdvance:   16,
     gameDuration: 80,
     invites:      12,
