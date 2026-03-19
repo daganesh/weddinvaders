@@ -11,7 +11,7 @@ import {
 import { LEVELS, getSpawnPool, isLevelComplete } from './levels';
 
 const FPS               = 60;
-const ITEM_SPAWN_FRAMES = 160;
+const ITEM_SPAWN_FRAMES = 90;   // ~1.5 s between spawns
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -33,12 +33,15 @@ function makePlayer(role) {
   };
 }
 
-function spawnItem(groomRow, brideRow, level) {
+function spawnItem(groomRow, brideRow, level, acquiredItems = []) {
   const minRow = groomRow + 1;
   const maxRow = brideRow  - 1;
   if (minRow > maxRow) return null;
 
-  const spawnPool = getSpawnPool(level);
+  // Don't re-spawn purchasable/discount items already acquired — only income & mines keep spawning
+  const spawnPool = getSpawnPool(level).filter(t =>
+    t.incomeType === 'income' || t.incomeType === 'mine' || !acquiredItems.includes(t.id)
+  );
   if (spawnPool.length === 0) return null;
 
   const row      = minRow + Math.floor(Math.random() * (maxRow - minRow + 1));
@@ -96,6 +99,7 @@ export function getInitialState(levelIndex = 0) {
     items:           [],
     acquiredItems:   [],
     messages:        [],
+    score:           0,
     spawnTimer:      0,
     rowAdvanceTimer: 0,
     advanceAnim:     0,
@@ -132,8 +136,8 @@ export function useGameState() {
         setState(s => ({ ...s, phase: 'playing' })); return;
       }
 
-      // Meeting scene: any key advances once the image has appeared (>= 60 frames)
-      if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 60) {
+      // Meeting scene: any key advances once the couple image has appeared (>= 80 frames)
+      if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 80) {
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
           setState({ ...getInitialState(nextLevel), phase: 'playing' });
@@ -250,7 +254,7 @@ export function useGameState() {
 
       let { frame, time, money, ammo, discount, lives,
             players, bullets, items, acquiredItems,
-            messages, spawnTimer, rowAdvanceTimer, advanceAnim,
+            messages, score, spawnTimer, rowAdvanceTimer, advanceAnim,
             currentLevel } = s;
 
       frame++;
@@ -301,7 +305,7 @@ export function useGameState() {
       // ── item spawn ───────────────────────────────────────────────────
       spawnTimer++;
       if (spawnTimer >= ITEM_SPAWN_FRAMES && items.length < 8) {
-        const it = spawnItem(newPlayers.groom.row, newPlayers.bride.row, level);
+        const it = spawnItem(newPlayers.groom.row, newPlayers.bride.row, level, acquiredItems);
         if (it) items = [...items, it];
         spawnTimer = 0;
       }
@@ -313,11 +317,13 @@ export function useGameState() {
         flashTimer: Math.max(0, it.flashTimer - 1),
       }));
 
-      // ── items escaping off-screen → lose a life if essential ─────────
+      // ── items escaping off-screen → lose a life if essential and not yet acquired
       const escaped = items.filter(it =>
         it.x < -ITEM_WIDTH * 2 || it.x > GAME_WIDTH + ITEM_WIDTH * 2
       );
-      if (escaped.some(it => it.essential)) lives = Math.max(0, lives - 1);
+      if (escaped.some(it => it.essential && !acquiredItems.includes(it.templateId))) {
+        lives = Math.max(0, lives - 1);
+      }
       items = items.filter(it =>
         it.x >= -ITEM_WIDTH * 2 && it.x <= GAME_WIDTH + ITEM_WIDTH * 2
       );
@@ -365,6 +371,11 @@ export function useGameState() {
             } else if (it.incomeType === 'mine') {
               lives = Math.max(0, lives - 1);
               newMessages.push(msg('💣 TRAP! −1 life', it, '#f44336'));
+            } else {
+              // Purchasable item (required or optional) — award score
+              const pts = it.maxPrice * 10;
+              score += pts;
+              newMessages.push(msg(`+${pts}pts`, it, it.essential ? '#ffd700' : '#b3e5ff'));
             }
           } else {
             items[ii] = { ...it, price: newPrice, flashTimer: 8 };
@@ -401,6 +412,7 @@ export function useGameState() {
         items,
         acquiredItems:   newAcquired,
         messages:        newMessages,
+        score,
         spawnTimer,
         rowAdvanceTimer,
         advanceAnim,
@@ -436,7 +448,7 @@ export function useGameState() {
       case 'NEXT_LEVEL': {
         const s = getState();
         // Guard: don't advance too early during meeting animation
-        if (s.phase === 'meeting' && s.meetingTimer < 60) break;
+        if (s.phase === 'meeting' && s.meetingTimer < 80) break;
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
           setState({ ...getInitialState(nextLevel), phase: 'playing' });
