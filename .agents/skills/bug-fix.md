@@ -7,12 +7,12 @@ Use this skill when diagnosing runtime errors, broken game behaviour, or visual 
 1. **Read the error** — open browser DevTools → Console. Note the exact error message and stack trace.
 
 2. **Identify the module** — map the error to the correct file:
-   - Game logic (state mutation, collisions, timing) → `src/useGameState.js`
-   - Visual glitch (wrong position, missing element) → `src/renderer.js`
-   - Wrong value (price, speed, row) → `src/constants.js` or `src/levels.js`
+   - Game logic (state mutation, collisions, timing) → `src/useGameState.js` ([`knowledge/use-game-state.md`](../knowledge/use-game-state.md))
+   - Visual glitch (wrong position, missing element) → `src/renderer.js` ([`knowledge/renderer.md`](../knowledge/renderer.md))
+   - Wrong value (price, speed, row) → `src/constants.js` ([`knowledge/constants.md`](../knowledge/constants.md)) or `src/levels.js`
    - Asset not loading → `src/useAssets.js` or `src/assets/`
-   - Canvas size / control layout → `src/Game.jsx` or `src/Game.css`
-   - Pixel sprite looks wrong → `src/pixelArt.js`
+   - Canvas size / control layout → `src/Game.jsx` ([`knowledge/game-jsx.md`](../knowledge/game-jsx.md)) or `src/Game.css`
+   - Pixel sprite looks wrong → `src/pixelArt.js` — **note: currently unused/dead code, not imported anywhere**, so a "pixel sprite" bug report almost always means `drawPlayer()`/`drawItem()` in `renderer.js` instead
 
 3. **Read the relevant file(s)** — use the Read tool to get the current content before editing.
 

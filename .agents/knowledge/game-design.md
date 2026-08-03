@@ -14,9 +14,10 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 | `lost` | Ran out of lives, money went negative, or met without completing requirements |
 
 ## Players
-- **Groom** — starts top-right (row 0), moves down. Controls: A/D move, W shoot, S cycle ammo.
-- **Bride** — starts bottom-left (row 8), moves up. Controls: ←/→ move, ↑ shoot, ↓ cycle ammo.
+- **Groom** — starts top-right (row 0), moves down. Controls: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot.
+- **Bride** — starts bottom-left (row 8), moves up. Controls: A/D move, W shoot, S cycle ammo.
 - Both move one row at a time on a timed `rowAdvanceTimer`.
+- Key bindings are handled in `onKey()` / `moveX()` in [`knowledge/use-game-state.md`](use-game-state.md).
 
 ## Ammo Types
 | Type | Key | Cost | Effect |
@@ -25,7 +26,7 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 | 💌 Invite | `invite` | 1 envelope | Hits `guest` items → guest attends, brings $100–$300 random gift |
 | 💕 Heart | `heart` | 1 heart | Hits `parent_bride`/`parent_groom` → family donates $300–$500 random |
 
-## Item Types (defined in `src/constants.js` `WEDDING_ITEMS`)
+## Item Types (defined in `src/constants.js` `WEDDING_ITEMS` — see [`knowledge/constants.md`](constants.md))
 | ID | Emoji | Type | Notes |
 |----|-------|------|-------|
 | `rings` | 💍 | purchase (required) | Always required |
@@ -45,11 +46,11 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 
 | Level | Name | Required Items | money | priceScale | itemSpeed | hasMines |
 |-------|------|---------------|-------|-----------|-----------|---------|
-| 1 | Save the Date | rings | $9900 | 0.1× | 0.35 | No |
-| 2 | The Ceremony | rings, officiant | $3000 | 0.4× | 0.9 | No |
-| 3 | The Reception | rings, officiant, catering | $2500 | 0.65× | 1.2 | No |
-| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $2000 | 0.9× | 1.5 | Yes |
-| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1800 | 1.2× | 2.0 | Yes |
+| 1 | Save the Date | rings | $9900 | 0.1× | 1.5 | No |
+| 2 | The Ceremony | rings, officiant | $3000 | 0.4× | 2.0 | No |
+| 3 | The Reception | rings, officiant, catering | $2500 | 0.65× | 2.5 | No |
+| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $2000 | 0.9× | 3.0 | Yes |
+| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1800 | 1.2× | 3.5 | Yes |
 
 ## Win / Lose Conditions
 - **Win level**: All `required` items acquired when players meet (or time runs out with money ≥ 0).
