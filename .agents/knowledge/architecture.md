@@ -17,7 +17,7 @@ src/
 ├── levels.js         # LEVELS array, getSpawnPool(), isLevelComplete()
 ├── useGameState.js   # Core game logic hook (update loop, input, collision)
 ├── renderer.js       # Pure canvas drawing — render(ctx, state, assets)
-├── pixelArt.js       # 8×8 pixel-sprite definitions + drawPixelSprite()
+├── pixelArt.js       # 8×8 pixel-sprite definitions + drawPixelSprite() — currently UNUSED (not imported anywhere)
 ├── useAssets.js      # Preloads bride/groom/couple PNG images
 └── assets/
     ├── bride-nobg.png
@@ -27,13 +27,19 @@ src/
 
 ## Data Flow
 ```
-Game.jsx
+Game.jsx                          → knowledge/game-jsx.md
   ├── useGameState()  →  stateRef (never React state — avoids re-renders)
+  │                                → knowledge/use-game-state.md
   ├── useAssets()     →  assetsRef
   └── requestAnimationFrame loop:
         update(stateRef)   ← pure mutation via setState(updater)
         render(ctx, state, assets)
+                                   → knowledge/renderer.md
 ```
+Both `useGameState.js` and `renderer.js` read shared data/config from
+`constants.js` (dimensions, timing, `WEDDING_ITEMS`, `AMMO_META`) and
+`levels.js` (`LEVELS`, `getSpawnPool()`, `isLevelComplete()`) — see
+[`knowledge/constants.md`](constants.md).
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
@@ -43,3 +49,11 @@ Game.jsx
 
 ## Entry Point
 `src/main.jsx` → `<App />` → `<Game />` — the canvas is the only meaningful DOM node.
+
+## Component Files
+| File | Covers |
+|------|--------|
+| [`knowledge/use-game-state.md`](use-game-state.md) | `useGameState()` hook in `src/useGameState.js` — core game logic, input, update loop |
+| [`knowledge/renderer.md`](renderer.md) | `render()` and draw functions in `src/renderer.js` — all canvas drawing |
+| [`knowledge/game-jsx.md`](game-jsx.md) | `Game` component in `src/Game.jsx` — React shell wiring hooks + canvas + controls |
+| [`knowledge/constants.md`](constants.md) | `src/constants.js` — shared dimensions, timing, `WEDDING_ITEMS`, `AMMO_META` schema |

@@ -24,8 +24,9 @@ Use this skill when adding new items, ammo types, levels, game phases, or UI cha
 1. Add the ammo key to `AMMO_ORDER` and `AMMO_META` in `src/constants.js`.
 2. Add `AMMO_DAMAGE[newType]` in `src/constants.js`.
 3. Add the ammo count to `getInitialState()` in `src/useGameState.js`.
-4. Handle the ammo type in `fireBullet()` (cost deduction) and `handleCollision()` (effect).
-5. Update `drawHUD()` in `src/renderer.js` to display the new ammo count.
+4. Handle the ammo type in `shoot()` (cost/ammo deduction, `src/useGameState.js`) and in the bullet↔item
+   collision loop inside `update()` (effect on hit, same file — see [`knowledge/use-game-state.md`](../knowledge/use-game-state.md)).
+5. Update `drawHUD()` in `src/renderer.js` to display the new ammo count (see [`knowledge/renderer.md`](../knowledge/renderer.md)).
 
 ### Adding a new game phase
 1. Add phase handling to `update()` in `src/useGameState.js` (early-return for phases that pause the loop).

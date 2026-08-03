@@ -13,7 +13,7 @@ npm run dev
 
 ### Manual test checklist (run after any change)
 1. **Title screen** — loads without errors; ammo legend visible; click/Space starts game.
-2. **Player movement** — Groom: ←→ (A/D), shoot (W), cycle ammo (S). Bride: ←→ (←/→), shoot (↑), cycle ammo (↓).
+2. **Player movement** — Groom: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot. Bride: A/D move, W shoot, S cycle ammo.
 3. **Ammo types** — 💵 cash reduces item HP; 💌 invite targets guest items; 💕 heart targets family items.
 4. **Item acquisition** — shoot item to 0 HP → popup message, item added to acquired list, side panel checkmark updates.
 5. **Income items** — shooting a guest with invite gives random $100–$300; family with heart gives $300–$500.

@@ -24,7 +24,7 @@ There are no automated tests. All verification is manual in the browser.
    - What happens when lives hit 0?
    - Does the fix survive a level transition (state re-initialised via `getInitialState(nextLevel)`)?
 
-6. **Test both players** — groom (WASD/S) and bride (arrow keys/↓) independently.
+6. **Test both players** — groom (arrow keys move, ↑/↓ ammo, Space shoot) and bride (A/D move, W shoot, S ammo) independently.
 
 7. **Run lint**
    ```bash
