@@ -16,14 +16,22 @@ src/
 ├── constants.js      # All magic numbers + WEDDING_ITEMS + AMMO_META
 ├── levels.js         # LEVELS array, getSpawnPool(), isLevelComplete()
 ├── useGameState.js   # Core game logic hook (update loop, input, collision)
-├── renderer.js       # Pure canvas drawing — render(ctx, state, assets)
+├── renderer.js       # Pure canvas drawing — render(ctx, state, assets, config)
 ├── pixelArt.js       # 8×8 pixel-sprite definitions + drawPixelSprite() — currently UNUSED (not imported anywhere)
-├── useAssets.js      # Preloads bride/groom/couple PNG images
+├── useAssets.js      # Preloads bride/groom/couple PNG images, preferring a customization override per role
+├── customizationStore.js  # localStorage-backed customization config (images/colors/text) + DEFAULT_CONFIG — the only module that touches localStorage
+├── useCustomization.js    # Ref-based hook wrapping customizationStore.getConfig()
+├── AdminScreen.jsx   # Admin UI (reached via #/admin hash route) for editing the customization config
+├── AdminScreen.css
 └── assets/
     ├── bride-nobg.png
     ├── groom-nobg.png
     └── couple-nobg.png
 ```
+
+`App.jsx` is no longer a pure passthrough: it does a minimal hash-based route check
+(`window.location.hash === '#/admin'`) and renders `<AdminScreen>` or `<Game>` accordingly —
+no router dependency, since this is currently the only extra screen.
 
 ## Data Flow
 ```
@@ -41,10 +49,16 @@ Both `useGameState.js` and `renderer.js` read shared data/config from
 `levels.js` (`LEVELS`, `getSpawnPool()`, `isLevelComplete()`) — see
 [`knowledge/constants.md`](constants.md).
 
+`useAssets.js` and `renderer.js` additionally read the customization config from
+`customizationStore.js` (`getConfig()` / `DEFAULT_CONFIG`) — images, a small color palette, and a
+fixed set of wedding-text fields, backed by localStorage today (single active config, no
+multi-tenant keying yet) behind an interface designed to be swapped for a real API/DB later
+without touching call sites. `AdminScreen.jsx` is the only writer (`saveConfig()`/`resetToDefaults()`).
+
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
 - **`setState(updater)` pattern** — always pass a function so the closure reads the latest state.
-- **`renderer.js` is pure** — takes `(ctx, state, assets)`, returns nothing, has no side-effects.
+- **`renderer.js` is pure** — takes `(ctx, state, assets, config)`, returns nothing, has no side-effects. `config` defaults to `DEFAULT_CONFIG` when omitted (no `localStorage` access inside `renderer.js` itself).
 - **Canvas dimensions**: `CANVAS_WIDTH = 910` (800 play area + 110 panel), `GAME_HEIGHT = 600` (540 play + 60 HUD).
 
 ## Entry Point
