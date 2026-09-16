@@ -21,7 +21,7 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 | `useCustomization()` call | 12 | Ref-based hook reading the customization config once at mount into `configRef` — see `architecture.md`. |
 | `useGameState()` call | 13 | Destructures `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }` — see [`use-game-state.md`](use-game-state.md). |
 | render-callback effect | 15–24 | Registers a callback that calls `render(ctx, state, assets, config)` (see [`renderer.md`](renderer.md)) every frame, and starts/stops the `requestAnimationFrame` loop on mount/unmount. |
-| `.admin-btn` | in JSX | "⚙" button that navigates to the admin screen via `window.location.hash = '#/admin'` (routing handled in `App.jsx`, see `architecture.md`). |
+| `.game-toolbar` / `.admin-btn` | in JSX | A row above the `<canvas>` holding the "⚙" button that navigates to the admin screen via `window.location.hash = '#/admin'` (routing handled in `App.jsx`, see `architecture.md`). Deliberately laid out in normal flow above the canvas, not absolutely positioned over it — an earlier version overlapped the on-canvas side panel (`drawPanel`'s "LEVEL" header) since both sat in the same top-right corner. |
 | `handleCanvasClick` | 24–31 | Maps a canvas click to the right `handleAction` for the current phase (`START`, `NEXT_LEVEL`, `RESTART`). |
 | `<canvas>` element | 39–45 | Sized `CANVAS_WIDTH × GAME_HEIGHT` from `src/constants.js`; the only meaningful DOM node for gameplay. |
 | `.mobile-controls` block | 48–92 | On-screen ammo-select and shoot buttons for touch devices, dispatching `SELECT_AMMO` / `SHOOT` actions per role. |

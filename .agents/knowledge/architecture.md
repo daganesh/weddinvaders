@@ -21,6 +21,7 @@ src/
 ├── useAssets.js      # Preloads bride/groom/couple PNG images, preferring a customization override per role
 ├── customizationStore.js  # localStorage-backed customization config (images/colors/text) + DEFAULT_CONFIG — the only module that touches localStorage
 ├── useCustomization.js    # Ref-based hook wrapping customizationStore.getConfig()
+├── imageProcessing.js     # fileToProcessedPngDataUrl() — canvas-based upload processing: re-encodes to PNG, fades near-white pixels to transparent
 ├── AdminScreen.jsx   # Admin UI (reached via #/admin hash route) for editing the customization config
 ├── AdminScreen.css
 └── assets/
@@ -54,6 +55,10 @@ Both `useGameState.js` and `renderer.js` read shared data/config from
 fixed set of wedding-text fields, backed by localStorage today (single active config, no
 multi-tenant keying yet) behind an interface designed to be swapped for a real API/DB later
 without touching call sites. `AdminScreen.jsx` is the only writer (`saveConfig()`/`resetToDefaults()`).
+Before an uploaded file reaches that config, `AdminScreen.jsx` runs it through
+`imageProcessing.js`'s `fileToProcessedPngDataUrl()`, which re-encodes it as PNG and fades
+near-white pixels to transparent (a simple threshold chroma-key, not true background removal —
+can also fade genuinely white parts of the subject).
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.

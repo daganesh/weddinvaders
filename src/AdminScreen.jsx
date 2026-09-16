@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getConfig, saveConfig, resetToDefaults } from './customizationStore';
+import { fileToProcessedPngDataUrl } from './imageProcessing';
 import brideImgSrc from './assets/bride-nobg.png';
 import groomImgSrc from './assets/groom-nobg.png';
 import coupleImgSrc from './assets/couple-nobg.png';
@@ -21,13 +22,16 @@ export default function AdminScreen({ onExit }) {
     setTimeout(() => setStatus(''), 2000);
   }
 
-  function handleImageFile(role, file) {
+  async function handleImageFile(role, file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setConfig(c => ({ ...c, images: { ...c.images, [role]: reader.result } }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Re-encodes as PNG and fades near-white background pixels to
+      // transparent, so uploads don't need pre-editing.
+      const dataUrl = await fileToProcessedPngDataUrl(file);
+      setConfig(c => ({ ...c, images: { ...c.images, [role]: dataUrl } }));
+    } catch {
+      flashStatus(`Could not process that image for ${role}.`);
+    }
   }
 
   function resetImage(role) {

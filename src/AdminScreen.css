@@ -34,8 +34,16 @@
 
 .admin-image-row img {
   object-fit: contain;
-  background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
+  /* Checkerboard so transparent (background-removed) areas are visible. */
+  background-color: #3a3a3a;
+  background-image:
+    linear-gradient(45deg, #555 25%, transparent 25%),
+    linear-gradient(-45deg, #555 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #555 75%),
+    linear-gradient(-45deg, transparent 75%, #555 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
 .admin-image-controls {

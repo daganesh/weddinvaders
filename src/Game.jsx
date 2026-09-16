@@ -43,13 +43,15 @@ export default function Game() {
   return (
     <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
       <div className="game-container">
-        <button
-          className="admin-btn"
-          onClick={() => { window.location.hash = '#/admin'; }}
-          title="Customize"
-        >
-          ⚙
-        </button>
+        <div className="game-toolbar">
+          <button
+            className="admin-btn"
+            onClick={() => { window.location.hash = '#/admin'; }}
+            title="Customize"
+          >
+            ⚙
+          </button>
+        </div>
 
         <canvas
           ref={canvasRef}

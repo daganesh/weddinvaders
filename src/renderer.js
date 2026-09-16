@@ -33,6 +33,20 @@ function getItemLabel(item, cfg) {
   return item.label;
 }
 
+// Draws img scaled to fit inside (x, y, w, h) preserving its aspect ratio
+// (like CSS object-fit: contain), centered, instead of stretching/skewing it
+// to exactly fill the box — needed since a customization image upload can be
+// any aspect ratio.
+function drawImageContain(ctx, img, x, y, w, h) {
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  if (!iw || !ih) { ctx.drawImage(img, x, y, w, h); return; }
+  const scale = Math.min(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
 // ── background ──────────────────────────────────────────────────────────────
 
 function drawBackground(ctx, players, cfg) {
@@ -78,7 +92,7 @@ function drawPlayer(ctx, player, img, isGroom, cfg) {
 
   ctx.save();
   if (img) {
-    ctx.drawImage(img, x, y, w, h);
+    drawImageContain(ctx, img, x, y, w, h);
   } else {
     // Fallback coloured box + emoji
     ctx.fillStyle = isGroom ? cfg.colors.groomColor : cfg.colors.brideColor;
