@@ -1,0 +1,132 @@
+.admin-screen {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+  color: #eee;
+  font-family: Arial, sans-serif;
+}
+
+.admin-screen h1 {
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.admin-screen h2 {
+  font-size: 16px;
+  color: #ffd700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 6px;
+  margin: 28px 0 12px;
+}
+
+.admin-screen h3 {
+  font-size: 13px;
+  color: #aaa;
+  margin: 16px 0 8px;
+}
+
+.admin-image-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.admin-image-row img {
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.admin-image-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.admin-image-controls button {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.admin-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.admin-text-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.admin-text-row input {
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.admin-level-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.admin-level-row input {
+  padding: 5px 7px;
+  font-size: 13px;
+}
+
+.admin-level-index {
+  font-size: 12px;
+  color: #999;
+}
+
+.admin-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(10, 10, 20, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.admin-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+  cursor: pointer;
+}
+
+.admin-save {
+  background: #4caf50 !important;
+  border-color: #4caf50 !important;
+  color: #fff !important;
+  font-weight: bold;
+}
+
+.admin-status {
+  color: #4caf50;
+  font-size: 13px;
+}

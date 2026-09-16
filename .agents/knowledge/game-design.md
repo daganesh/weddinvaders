@@ -73,6 +73,19 @@ new `hourglass` is `2` (rare, same tier as family).
   speedup) for `HOURGLASS_SLOW_SECONDS` (15s) — a player-earned reprieve, not a hard freeze. The
   two effects compose rather than override each other; see `use-game-state.md`.
 
+## Customization Layer
+An admin can override a small set of visuals/text — first step toward a white-label product for
+wedding-arranging companies. Reached via a `#/admin` hash route (a settings button on the title
+screen links there); config is stored in `localStorage` behind `src/customizationStore.js`
+(single active config, no multi-tenant/per-wedding keying yet — planned for when a real DB backs
+this). In scope: the bride/groom/couple images (file upload → data URL), a small color palette
+(background gradient, accent, bride/groom fallback colors), and specific wedding text (title,
+tagline, win/lose messages, each level's name/subtitle, and the "Her Family"/"His Family" labels).
+Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
+beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
+see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads
+through rendering.
+
 ## Key Constraints
 - Items spawn on rows between the two players (never on their rows).
 - `exclusiveTo: 'bride'` items can only be shot by bride; `'groom'` items only by groom.

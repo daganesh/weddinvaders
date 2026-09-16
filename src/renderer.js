@@ -9,6 +9,7 @@ import {
   WEDDING_ITEMS,
 } from './constants';
 import { LEVELS } from './levels';
+import { DEFAULT_CONFIG } from './customizationStore';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -22,17 +23,23 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+function getLevelText(cfg, i) {
+  return cfg.text.levels[i] ?? DEFAULT_CONFIG.text.levels[i];
+}
+
+function getItemLabel(item, cfg) {
+  if (item.id === 'parent_bride') return cfg.text.familyLabels.bride;
+  if (item.id === 'parent_groom') return cfg.text.familyLabels.groom;
+  return item.label;
+}
+
 // ── background ──────────────────────────────────────────────────────────────
 
-const BG_TOP = '#1a3a70';
-const BG_MID = '#22478a';
-const BG_BOT = '#1a3a70';
-
-function drawBackground(ctx, players) {
+function drawBackground(ctx, players, cfg) {
   const grad = ctx.createLinearGradient(0, 0, 0, PLAY_HEIGHT);
-  grad.addColorStop(0,   BG_TOP);
-  grad.addColorStop(0.5, BG_MID);
-  grad.addColorStop(1,   BG_BOT);
+  grad.addColorStop(0,   cfg.colors.bgTop);
+  grad.addColorStop(0.5, cfg.colors.bgMid);
+  grad.addColorStop(1,   cfg.colors.bgBot);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, GAME_WIDTH, PLAY_HEIGHT);
 
@@ -64,7 +71,7 @@ function drawBackground(ctx, players) {
 
 // ── player sprites ───────────────────────────────────────────────────────────
 
-function drawPlayer(ctx, player, img, isGroom) {
+function drawPlayer(ctx, player, img, isGroom, cfg) {
   if (!player.alive) return;
   const { x, y } = player;
   const w = PLAYER_WIDTH, h = PLAYER_HEIGHT;
@@ -74,7 +81,7 @@ function drawPlayer(ctx, player, img, isGroom) {
     ctx.drawImage(img, x, y, w, h);
   } else {
     // Fallback coloured box + emoji
-    ctx.fillStyle = isGroom ? '#4169e1' : '#ff69b4';
+    ctx.fillStyle = isGroom ? cfg.colors.groomColor : cfg.colors.brideColor;
     ctx.fillRect(x, y, w, h);
     ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(isGroom ? '🤵' : '👰', x + w / 2, y + h / 2);
@@ -193,7 +200,7 @@ function drawItem(ctx, item) {
 
 // ── side panel ───────────────────────────────────────────────────────────────
 
-function drawPanel(ctx, state) {
+function drawPanel(ctx, state, cfg) {
   const { acquiredItems, currentLevel, score = 0 } = state;
   const level  = LEVELS[currentLevel] ?? LEVELS[0];
   const panelX = GAME_WIDTH;
@@ -215,7 +222,8 @@ function drawPanel(ctx, state) {
 
   ctx.font      = '9px Arial';
   ctx.fillStyle = '#aaa';
-  const name = level.name.length > 14 ? level.name.slice(0, 13) + '…' : level.name;
+  const levelName = getLevelText(cfg, currentLevel).name;
+  const name = levelName.length > 14 ? levelName.slice(0, 13) + '…' : levelName;
   ctx.fillText(name, midX, 26);
 
   // Helper — thin horizontal separator
@@ -282,7 +290,7 @@ function drawPanel(ctx, state) {
 
     ctx.font      = '8px monospace';
     ctx.fillStyle = done ? '#4caf50' : '#999';
-    ctx.fillText(item.label, midX, cardY + 32);
+    ctx.fillText(getItemLabel(item, cfg), midX, cardY + 32);
 
     if (done) {
       ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#4caf50'; ctx.textAlign = 'right';
@@ -339,7 +347,7 @@ function drawPanel(ctx, state) {
 
       ctx.font      = '7px monospace';
       ctx.fillStyle = acquired ? '#64b4ff' : '#555';
-      ctx.fillText(item.label, midX, cardY + 24);
+      ctx.fillText(getItemLabel(item, cfg), midX, cardY + 24);
 
       if (acquired) {
         ctx.font = 'bold 12px monospace'; ctx.fillStyle = '#64b4ff'; ctx.textAlign = 'right';
@@ -437,15 +445,15 @@ function drawAdvanceAnim(ctx, anim) {
 
 // ── meeting scene (players physically meet) ──────────────────────────────────
 
-function drawMeeting(ctx, state, assets) {
+function drawMeeting(ctx, state, assets, cfg) {
   const { meetingTimer, currentLevel, players } = state;
   const isLastLevel = currentLevel >= LEVELS.length - 1;
 
   // Blue gradient background (play area)
   const grad = ctx.createLinearGradient(0, 0, 0, PLAY_HEIGHT);
-  grad.addColorStop(0,   BG_TOP);
-  grad.addColorStop(0.5, BG_MID);
-  grad.addColorStop(1,   BG_BOT);
+  grad.addColorStop(0,   cfg.colors.bgTop);
+  grad.addColorStop(0.5, cfg.colors.bgMid);
+  grad.addColorStop(1,   cfg.colors.bgBot);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, GAME_WIDTH, PLAY_HEIGHT);
 
@@ -483,8 +491,8 @@ function drawMeeting(ctx, state, assets) {
       const brideImg = assets?.bride?.complete ? assets.bride : null;
       const meetBride = { ...players.bride, x: GAME_WIDTH / 2 - PLAYER_WIDTH - gap, y: meetY, alive: true };
       const meetGroom = { ...players.groom, x: GAME_WIDTH / 2 + gap,              y: meetY, alive: true };
-      drawPlayer(ctx, meetBride, brideImg, false);
-      drawPlayer(ctx, meetGroom, groomImg, true);
+      drawPlayer(ctx, meetBride, brideImg, false, cfg);
+      drawPlayer(ctx, meetGroom, groomImg, true, cfg);
     }
   }
 
@@ -520,7 +528,7 @@ function drawMeeting(ctx, state, assets) {
       ctx.fillStyle   = '#ffd700';
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur  = 22;
-      ctx.fillText("🎉  MARRIED!  🎉", GAME_WIDTH / 2, PLAY_HEIGHT - 55);
+      ctx.fillText(cfg.text.winMessage, GAME_WIDTH / 2, PLAY_HEIGHT - 55);
     } else {
       ctx.font        = 'bold 34px monospace';
       ctx.fillStyle   = '#ffd700';
@@ -531,9 +539,13 @@ function drawMeeting(ctx, state, assets) {
 
       const nextLevel = LEVELS[currentLevel + 1];
       if (nextLevel) {
+        const nextText = getLevelText(cfg, currentLevel + 1);
         ctx.font      = '17px Arial';
         ctx.fillStyle = '#ccc';
-        ctx.fillText(`Next: Level ${nextLevel.id} — ${nextLevel.name}`, GAME_WIDTH / 2, PLAY_HEIGHT - 34);
+        ctx.fillText(`Next: Level ${nextLevel.id} — ${nextText.name}`, GAME_WIDTH / 2, PLAY_HEIGHT - 34);
+        ctx.font      = '12px Arial';
+        ctx.fillStyle = '#999';
+        ctx.fillText(nextText.subtitle, GAME_WIDTH / 2, PLAY_HEIGHT - 18);
       }
     }
     ctx.shadowBlur  = 0;
@@ -557,11 +569,11 @@ function drawMeeting(ctx, state, assets) {
 
 // ── title screen ─────────────────────────────────────────────────────────────
 
-function drawTitle(ctx) {
+function drawTitle(ctx, cfg) {
   const grad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-  grad.addColorStop(0,   BG_TOP);
-  grad.addColorStop(0.5, BG_MID);
-  grad.addColorStop(1,   BG_BOT);
+  grad.addColorStop(0,   cfg.colors.bgTop);
+  grad.addColorStop(0.5, cfg.colors.bgMid);
+  grad.addColorStop(1,   cfg.colors.bgBot);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CANVAS_WIDTH, GAME_HEIGHT);
 
@@ -573,12 +585,12 @@ function drawTitle(ctx) {
   ctx.textAlign   = 'center';
   ctx.fillStyle   = '#fff';
   ctx.font        = 'bold 58px monospace';
-  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 24;
-  ctx.fillText("WEDDIN'VADERS", GAME_WIDTH / 2, 140);
+  ctx.shadowColor = cfg.colors.accent; ctx.shadowBlur = 24;
+  ctx.fillText(cfg.text.title, GAME_WIDTH / 2, 140);
   ctx.shadowBlur = 0;
 
-  ctx.font = '20px Arial'; ctx.fillStyle = '#ffd700';
-  ctx.fillText('Buy the wedding of your dreams!', GAME_WIDTH / 2, 188);
+  ctx.font = '20px Arial'; ctx.fillStyle = cfg.colors.accent;
+  ctx.fillText(cfg.text.tagline, GAME_WIDTH / 2, 188);
 
   const lines = [
     '👰 Bride  —  A/D move   ·   S ammo   ·   W shoot',
@@ -595,18 +607,18 @@ function drawTitle(ctx) {
   lines.forEach((line, i) => {
     const isLast = i === lines.length - 1;
     ctx.font      = isLast ? 'bold 18px Arial' : '15px Arial';
-    ctx.fillStyle = isLast ? '#ffd700' : (line === '' ? '#fff' : '#ccc');
-    if (isLast) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10; }
+    ctx.fillStyle = isLast ? cfg.colors.accent : (line === '' ? '#fff' : '#ccc');
+    if (isLast) { ctx.shadowColor = cfg.colors.accent; ctx.shadowBlur = 10; }
     ctx.fillText(line, GAME_WIDTH / 2, 240 + i * 26);
     ctx.shadowBlur = 0;
   });
 
-  drawPanel(ctx, { acquiredItems: [], currentLevel: 0 });
+  drawPanel(ctx, { acquiredItems: [], currentLevel: 0 }, cfg);
 }
 
 // ── overlays ─────────────────────────────────────────────────────────────────
 
-function drawOverlay(ctx, state, assets) {
+function drawOverlay(ctx, state, assets, cfg) {
   const { phase, currentLevel, acquiredItems, lives } = state;
   const level = LEVELS[currentLevel] ?? LEVELS[0];
 
@@ -620,15 +632,18 @@ function drawOverlay(ctx, state, assets) {
     ctx.fillStyle   = '#ffd700';
     ctx.shadowColor = '#ffd700';
     ctx.shadowBlur  = 24;
-    ctx.fillText('🎊 Level Complete! 🎊', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60);
+    ctx.fillText('🎊 Level Complete! 🎊', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 65);
     ctx.shadowBlur = 0;
 
     if (nextLevel) {
+      const nextText = getLevelText(cfg, currentLevel + 1);
       ctx.font = '22px Arial'; ctx.fillStyle = '#fff';
-      ctx.fillText(`Next: Lvl ${nextLevel.id} — ${nextLevel.name}`, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+      ctx.fillText(`Next: Lvl ${nextLevel.id} — ${nextText.name}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
+      ctx.font = '14px Arial'; ctx.fillStyle = '#aaa';
+      ctx.fillText(nextText.subtitle, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 16);
     }
     ctx.font = '18px Arial'; ctx.fillStyle = '#ccc';
-    ctx.fillText('Press any key to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 44);
+    ctx.fillText('Press any key to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 48);
 
   } else if (phase === 'gameComplete') {
     const img = assets?.couple;
@@ -641,7 +656,7 @@ function drawOverlay(ctx, state, assets) {
     ctx.fillStyle   = '#ffd700';
     ctx.shadowColor = '#ffd700';
     ctx.shadowBlur  = 24;
-    ctx.fillText("🎉 YOU'RE MARRIED! 🎉", GAME_WIDTH / 2, GAME_HEIGHT - 110);
+    ctx.fillText(cfg.text.winMessage, GAME_WIDTH / 2, GAME_HEIGHT - 110);
     ctx.shadowBlur = 0;
     ctx.font = '18px Arial'; ctx.fillStyle = '#ccc';
     ctx.fillText('Press any key to return to title', GAME_WIDTH / 2, GAME_HEIGHT - 70);
@@ -652,7 +667,7 @@ function drawOverlay(ctx, state, assets) {
     ctx.fillStyle   = '#f44336';
     ctx.shadowColor = '#f44336';
     ctx.shadowBlur  = 24;
-    ctx.fillText('💔 Wedding Failed!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 65);
+    ctx.fillText(cfg.text.loseMessage, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 65);
     ctx.shadowBlur = 0;
 
     // Explain why — much clearer for the player
@@ -667,7 +682,7 @@ function drawOverlay(ctx, state, assets) {
         const labels = uniqueMissing
           .map(id => {
             const w = WEDDING_ITEMS.find(w => w.id === id);
-            return w ? `${w.emoji} ${w.label}` : id;
+            return w ? `${w.emoji} ${getItemLabel(w, cfg)}` : id;
           })
           .join('  ·  ');
         reason = `Still needed: ${labels}`;
@@ -688,34 +703,35 @@ function drawOverlay(ctx, state, assets) {
 
 // ── main render entry point ───────────────────────────────────────────────────
 
-export function render(ctx, state, assets) {
+export function render(ctx, state, assets, config) {
+  const cfg = config ?? DEFAULT_CONFIG;
   const { phase, players, bullets, items, messages, advanceAnim } = state;
 
-  if (phase === 'title') { drawTitle(ctx); return; }
+  if (phase === 'title') { drawTitle(ctx, cfg); return; }
 
   // ── Meeting scene: players physically meet ─────────────────────────────────
   if (phase === 'meeting') {
-    drawMeeting(ctx, state, assets);
-    drawPanel(ctx, state);
+    drawMeeting(ctx, state, assets, cfg);
+    drawPanel(ctx, state, cfg);
     return;
   }
 
-  drawBackground(ctx, players);
+  drawBackground(ctx, players, cfg);
   for (const it of items) drawItem(ctx, it);
   for (const b of bullets) drawBullet(ctx, b);
 
   const groomImg = assets?.groom?.complete ? assets.groom : null;
   const brideImg = assets?.bride?.complete ? assets.bride : null;
-  drawPlayer(ctx, players.groom, groomImg, true);   // isGroom = true
-  drawPlayer(ctx, players.bride, brideImg, false);  // isGroom = false
+  drawPlayer(ctx, players.groom, groomImg, true, cfg);   // isGroom = true
+  drawPlayer(ctx, players.bride, brideImg, false, cfg);  // isGroom = false
 
   drawMessages(ctx, messages);
   drawAdvanceAnim(ctx, advanceAnim);
   drawHUD(ctx, state);
-  drawPanel(ctx, state);
+  drawPanel(ctx, state, cfg);
 
   if (phase === 'levelComplete' || phase === 'gameComplete' || phase === 'lost') {
-    drawOverlay(ctx, state, assets);
-    drawPanel(ctx, state);  // keep checklist visible on top of overlay
+    drawOverlay(ctx, state, assets, cfg);
+    drawPanel(ctx, state, cfg);  // keep checklist visible on top of overlay
   }
 }
