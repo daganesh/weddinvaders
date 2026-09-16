@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useGameState } from './useGameState';
 import { useAssets }    from './useAssets';
+import { useCustomization } from './useCustomization';
+import { getConfig }    from './customizationStore';
 import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
 import './Game.css';
@@ -8,6 +10,7 @@ import './Game.css';
 export default function Game() {
   const canvasRef = useRef(null);
   const assetsRef = useAssets();
+  const configRef = useCustomization();
   const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState();
 
   useEffect(() => {
@@ -15,11 +18,11 @@ export default function Game() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      render(ctx, state, assetsRef.current);
+      render(ctx, state, assetsRef.current, configRef.current);
     });
     startLoop();
     return () => stopLoop();
-  }, [startLoop, stopLoop, setRenderCallback, assetsRef]);
+  }, [startLoop, stopLoop, setRenderCallback, assetsRef, configRef]);
 
   const handleCanvasClick = useCallback(() => {
     const { phase } = getState();
@@ -33,9 +36,21 @@ export default function Game() {
   // ── mobile / on-screen controls ──────────────────────────────────────────
   const ammoKeys = AMMO_ORDER.map(id => ({ id, ...AMMO_META[id] }));
 
+  // Read directly (not via configRef) since this is display-only and refs
+  // shouldn't be accessed during render.
+  const { brideColor, groomColor } = getConfig().colors;
+
   return (
-    <div className="game-wrapper">
+    <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
       <div className="game-container">
+        <button
+          className="admin-btn"
+          onClick={() => { window.location.hash = '#/admin'; }}
+          title="Customize"
+        >
+          ⚙
+        </button>
+
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
