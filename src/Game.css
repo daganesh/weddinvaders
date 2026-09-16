@@ -24,7 +24,6 @@ body {
 }
 
 .game-container {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -33,10 +32,14 @@ body {
   width: 100%;
 }
 
+.game-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: 910px;
+}
+
 .admin-btn {
-  position: absolute;
-  top: -4px;
-  right: 0;
   font-size: 18px;
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.08);
@@ -44,7 +47,6 @@ body {
   border-radius: 8px;
   cursor: pointer;
   color: #ccc;
-  z-index: 1;
 }
 
 .admin-btn:hover {

@@ -30,7 +30,7 @@ render(ctx, state, assetsRef.current, configRef.current);
 |---|---|---|
 | `render(ctx, state, assets, config)` | 706 | Exported entry point; resolves `cfg = config ?? DEFAULT_CONFIG`, then dispatches to the phase-appropriate draw functions below based on `state.phase`. |
 | `drawBackground(ctx, players, cfg)` | 38 | Play-field background, per-row shading. Gradient stops read `cfg.colors.bgTop/bgMid/bgBot`. |
-| `drawPlayer(ctx, player, img, isGroom, cfg)` | 74 | Draws bride/groom sprite images at their current position; falls back to `cfg.colors.brideColor`/`groomColor` + emoji when the image isn't loaded/overridden. |
+| `drawPlayer(ctx, player, img, isGroom, cfg)` | 88 | Draws bride/groom sprite images at their current position via `drawImageContain` (preserves the image's own aspect ratio, letterboxed within the `PLAYER_WIDTH × PLAYER_HEIGHT` box, instead of stretching/skewing it — matters since a customization upload can be any aspect ratio); falls back to `cfg.colors.brideColor`/`groomColor` + emoji when the image isn't loaded/overridden. |
 | `drawBullet(ctx, b)` | 102 | Draws one projectile, colored by `ammoType`. |
 | `drawItem(ctx, item)` | 129 | Draws one flying wedding item: emoji, remaining price, flash feedback on hit. Border is a low-alpha rgba (`rgba(255,215,0,0.35)` essential / `rgba(255,255,255,0.10)` non-essential) — intentionally faint, not solid. Special-text branch includes `incomeType === 'time'` for the hourglass ("⏳ SLOW TIME"), alongside `income`/`mine`/`discount`. |
 | `drawPanel(ctx, state, cfg)` | 203 | Right-side 110px checklist panel (required items + checkmarks). Level name and `parent_bride`/`parent_groom` item labels are resolved through `cfg` via `getLevelText`/`getItemLabel`. |
@@ -47,8 +47,11 @@ special-text branch — the "⏳ SLOW TIME" label is effectively unreachable tod
 `discount`'s "−30% OFF". This is an existing rendering quirk, not something introduced or fixed
 here; the player still sees the correct price/HP bar while shooting it down.
 
-`roundRect()`, `getLevelText(cfg, index)`, and `getItemLabel(item, cfg)` (near the top of the file)
-are private helpers, not part of the public surface.
+`roundRect()`, `getLevelText(cfg, index)`, `getItemLabel(item, cfg)`, and
+`drawImageContain(ctx, img, x, y, w, h)` (near the top of the file) are private helpers, not part
+of the public surface. `drawImageContain` is the CSS `object-fit: contain` equivalent for canvas —
+used only by `drawPlayer`, since the couple-portrait draws in `drawMeeting`/`drawOverlay` already
+compute their own height from the image's aspect ratio inline.
 
 ## Relationships / Cross-links
 - Reads dimension/timing/item constants from `src/constants.js` — see [`constants.md`](constants.md).
