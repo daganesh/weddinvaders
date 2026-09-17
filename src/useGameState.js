@@ -538,14 +538,21 @@ export function useGameState() {
         shoot(action.role); break;
       case 'CYCLE_AMMO':
         cycleAmmoFor(action.role, action.dir ?? 1); break;
-      case 'SWIPE_MOVE': {
-        // Reuses the continuous key-held movement in update() via a
-        // synthetic, briefly-held key — a swipe becomes a short move burst.
-        const leftKey  = action.role === 'bride' ? 'KeyA' : 'ArrowLeft';
-        const rightKey = action.role === 'bride' ? 'KeyD' : 'ArrowRight';
-        const key = action.direction === 'left' ? leftKey : rightKey;
-        keysRef.current.add(key);
-        setTimeout(() => keysRef.current.delete(key), 220);
+      case 'DRAG_MOVE': {
+        // Applied immediately (not queued through keysRef/update()'s per-frame
+        // moveX) so the player tracks the finger 1:1 — deltaX is already in
+        // game-pixel units (Game.jsx converts the raw touch delta using the
+        // canvas's CSS-to-internal-resolution scale), so a fast flick covers
+        // as much ground as an equally fast, deliberate drag.
+        setState(s => {
+          if (s.phase !== 'playing') return s;
+          if (s.mode === 'solo' && action.role !== s.soloRole) return s;
+          const player = s.players[action.role];
+          if (!player || !player.alive) return s;
+          const x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_WIDTH, player.x + action.deltaX));
+          if (x === player.x) return s;
+          return { ...s, players: { ...s.players, [action.role]: { ...player, x } } };
+        });
         break;
       }
       case 'SELECT_AMMO':
