@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG = {
     tagline: 'Buy the wedding of your dreams!',
     winMessage: "🎉 YOU'RE MARRIED! 🎉",
     loseMessage: '💔 Wedding Failed!',
+    names: { bride: 'Bride', groom: 'Groom' },
     familyLabels: { bride: 'Her Family', groom: 'His Family' },
     // Parallel array to LEVELS in levels.js, indexed by array position.
     levels: [
@@ -49,6 +50,7 @@ function mergeContent(partial) {
     text: {
       ...DEFAULT_CONFIG.text,
       ...partial?.text,
+      names: { ...DEFAULT_CONFIG.text.names, ...partial?.text?.names },
       familyLabels: { ...DEFAULT_CONFIG.text.familyLabels, ...partial?.text?.familyLabels },
       levels: DEFAULT_CONFIG.text.levels.map((d, i) => ({ ...d, ...partial?.text?.levels?.[i] })),
     },
@@ -128,14 +130,21 @@ export function setActivePackage(id) {
   return id;
 }
 
-// Creates a new package seeded from the default package's values.
-export function createPackage(name) {
+// Creates a new package seeded from another package's values (default, unless
+// a different copyFromId is given).
+export function createPackage(name, copyFromId = DEFAULT_PACKAGE_ID) {
   const trimmed = (name ?? '').trim();
   if (!trimmed) throw new Error('Package name is required.');
   const store = normalizeStore(readRaw());
   if (isNameTaken(store, trimmed)) throw new Error(`A package named "${trimmed}" already exists.`);
+  const source = store.packages[copyFromId] ?? store.packages[DEFAULT_PACKAGE_ID];
   const id = `pkg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  const pkg = { id, name: trimmed, isDefault: false, ...structuredClone(DEFAULT_CONFIG) };
+  const pkg = {
+    id,
+    name: trimmed,
+    isDefault: false,
+    ...structuredClone({ images: source.images, colors: source.colors, text: source.text }),
+  };
   store.packages[id] = pkg;
   writeStore(store);
   return pkg;

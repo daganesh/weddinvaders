@@ -38,7 +38,9 @@ export default function Game() {
 
   // Read directly (not via configRef) since this is display-only and refs
   // shouldn't be accessed during render.
-  const { brideColor, groomColor } = getActiveConfig().colors;
+  const activeConfig = getActiveConfig();
+  const { brideColor, groomColor } = activeConfig.colors;
+  const { bride: brideName, groom: groomName } = activeConfig.text.names;
 
   return (
     <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
@@ -109,8 +111,8 @@ export default function Game() {
         </div>
 
         <div className="key-legend">
-          <span>👰 Bride — A/D move · S ammo · W shoot</span>
-          <span>🤵 Groom — ←/→ move · ↑/↓ ammo · Space shoot</span>
+          <span>👰 {brideName} — A/D move · S ammo · W shoot</span>
+          <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</span>
         </div>
       </div>
     </div>
