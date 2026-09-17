@@ -42,5 +42,16 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 - Rendered by `App.jsx` alongside `AdminScreen.jsx` behind a `#/admin` hash-route check (`App.jsx`
   is no longer a pure passthrough) — see `architecture.md`.
 - Imports layout/dimension constants from `src/constants.js` — see [`constants.md`](constants.md).
-- Styling lives in `src/Game.css`, imported here (line 6).
+- Styling lives in `src/Game.css`, imported here (line 6). Its `(max-width: 640px) and
+  (orientation: portrait)` media query is the CSS-side counterpart of `constants.js`'s
+  `IS_MOBILE_PORTRAIT` (same threshold, checked independently since CSS media queries can't read a
+  JS module's constant): `.game-container` is pinned to `calc(100dvh - 16px)` (subtracting
+  `.game-wrapper`'s own 8px top+bottom padding, which otherwise pushes the layout 16px past the
+  viewport) and `.canvas-wrapper` becomes a `flex: 1 1 0` middle section between the toolbar and
+  on-screen controls, so the canvas — now intrinsically taller/narrower on mobile portrait, see
+  `constants.md` — fills whatever vertical space those two smaller elements leave, instead of a
+  short landscape-shaped box centered in a mostly-empty tall screen. `flex-basis: 0` (not `auto`)
+  matters here: with `auto`, the browser sizes this flex item from the canvas's own preferred
+  (aspect-ratio-driven) height before shrinking, which under-shrinks it and pushes couple mode's
+  taller two-row `.mobile-controls` bar off the bottom of the screen.
 - Manual verification of this component's wiring is covered by [`testing.md`](testing.md) and [`write-test.md`](../skills/write-test.md).
