@@ -314,6 +314,12 @@
   font-size: 14px;
 }
 
+.admin-modal-error {
+  color: #ff8a80;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
 .admin-modal-actions {
   display: flex;
   justify-content: flex-end;
