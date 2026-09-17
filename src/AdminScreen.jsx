@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  DEFAULT_PACKAGE_ID,
   DEFAULT_CONFIG,
   listPackages,
   getActivePackageId,
@@ -11,18 +10,21 @@ import {
   renamePackage,
   deletePackage,
 } from './customizationStore';
-import { fileToProcessedPngDataUrl } from './imageProcessing';
+import { fileToImageDataUrl } from './imageProcessing';
+import { WEDDING_ITEMS } from './constants';
 import brideImgSrc from './assets/bride-nobg.png';
 import groomImgSrc from './assets/groom-nobg.png';
 import coupleImgSrc from './assets/couple-nobg.png';
 import './AdminScreen.css';
 
 const DEFAULT_IMG_SRC = { bride: brideImgSrc, groom: groomImgSrc, couple: coupleImgSrc };
-const IMAGE_ROLES = [
+const PORTRAIT_ROLES = [
   { role: 'bride', label: 'Bride' },
   { role: 'groom', label: 'Groom' },
   { role: 'couple', label: 'Couple (win screen)' },
 ];
+// Every collectible item doubles as an `images` key, same as bride/groom/couple.
+const ITEM_IMAGE_ROLES = WEDDING_ITEMS.map(w => ({ role: w.id, label: w.label, emoji: w.emoji }));
 
 export default function AdminScreen({ onExit }) {
   const [packages, setPackages] = useState(() => listPackages());
@@ -37,7 +39,9 @@ export default function AdminScreen({ onExit }) {
   const [newPackageCopyFrom, setNewPackageCopyFrom] = useState(selectedId);
   const [modalError, setModalError] = useState('');
 
-  const isDefault = selectedId === DEFAULT_PACKAGE_ID;
+  // System packages (Default, 80s Arcade, …) are code-defined and read-only —
+  // shipped on every deploy, never persisted, can't be edited/renamed/deleted.
+  const isDefault = draft.isDefault;
 
   function flashStatus(message) {
     setStatus(message);
@@ -111,9 +115,9 @@ export default function AdminScreen({ onExit }) {
   async function handleImageFile(role, file) {
     if (!file) return;
     try {
-      // Re-encodes as PNG and fades near-white background pixels to
-      // transparent, so uploads don't need pre-editing.
-      const dataUrl = await fileToProcessedPngDataUrl(file);
+      // SVGs pass through as-is; other formats get re-encoded to PNG with
+      // near-white background pixels faded to transparent.
+      const dataUrl = await fileToImageDataUrl(file);
       setDraft(c => ({ ...c, images: { ...c.images, [role]: dataUrl } }));
     } catch {
       flashStatus(`Could not process that image for ${role}.`);
@@ -173,6 +177,7 @@ export default function AdminScreen({ onExit }) {
               onClick={() => selectPackage(pkg.id)}
             >
               {pkg.name}
+              {pkg.isDefault && <span className="admin-system-tag">system</span>}
               {pkg.id === activeId && <span className="admin-active-dot" title="Active package" />}
             </button>
           ))}
@@ -237,21 +242,43 @@ export default function AdminScreen({ onExit }) {
         </div>
         {isDefault && (
           <p className="admin-hint">
-            The default package is read-only. Use the + button above to create a new package from these values.
+            "{draft.name}" is a system package and is read-only. Use the + button above to create a
+            new package from these values.
           </p>
         )}
       </section>
 
       <fieldset disabled={isDefault} className="admin-fieldset">
         <section>
-          <h2>Images</h2>
-          {IMAGE_ROLES.map(({ role, label }) => (
+          <h2>Portraits</h2>
+          {PORTRAIT_ROLES.map(({ role, label }) => (
             <div className="admin-image-row" key={role}>
               <img src={draft.images[role] || DEFAULT_IMG_SRC[role]} alt={label} width={80} height={80} />
               <div className="admin-image-controls">
                 <span>{label}</span>
-                <input type="file" accept="image/*" onChange={e => handleImageFile(role, e.target.files[0])} />
+                <input type="file" accept="image/*,.svg" onChange={e => handleImageFile(role, e.target.files[0])} />
                 <button onClick={() => resetImage(role)}>Reset to default</button>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section>
+          <h2>Item Icons</h2>
+          <p className="admin-hint">
+            Upload a PNG or SVG per item. Left blank, an item falls back to its emoji.
+          </p>
+          {ITEM_IMAGE_ROLES.map(({ role, label, emoji }) => (
+            <div className="admin-image-row" key={role}>
+              {draft.images[role] ? (
+                <img src={draft.images[role]} alt={label} width={56} height={56} />
+              ) : (
+                <div className="admin-image-emoji-fallback" aria-label={`${label} (emoji fallback)`}>{emoji}</div>
+              )}
+              <div className="admin-image-controls">
+                <span>{label}</span>
+                <input type="file" accept="image/*,.svg" onChange={e => handleImageFile(role, e.target.files[0])} />
+                <button onClick={() => resetImage(role)}>Reset to emoji</button>
               </div>
             </div>
           ))}

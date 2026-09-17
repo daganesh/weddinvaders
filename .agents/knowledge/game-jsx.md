@@ -17,7 +17,7 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 ## Key Surface
 | Element | Line | Purpose |
 |---|---|---|
-| `useAssets()` call | 14 | Preloads bride/groom/couple images into `assetsRef`, preferring a customization override per role (see `useAssets.js` / `customizationStore.js`). |
+| `useAssets()` call | 14 | Preloads bride/groom/couple images plus any per-item icon override into `assetsRef` (`{ bride, groom, couple, items: { [itemId]: Image }, loaded }`), preferring the active package's `images` per role/item id (see `useAssets.js` / `customizationStore.js`). |
 | `useCustomization()` call | 15 | Ref-based hook reading the customization config once at mount into `configRef` — see `architecture.md`. |
 | `useGameState()` call | 16 | Destructures `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }` — see [`use-game-state.md`](use-game-state.md). |
 | `uiPhase`/`uiMode`/`uiSoloRole` state | 21–24 | Lightweight React-state mirrors of `state.phase`/`state.mode`/`state.soloRole`, updated only inside the render callback when `state.phase` actually changes (tracked via `prevPhaseRef`) — not every frame. Game state itself stays ref-based for 60fps perf (see `architecture.md`'s "Key Design Decisions"), but the DOM layer needs to reactively show/hide the mode-select overlay and swap between couple/solo on-screen controls, which plain refs can't drive. |

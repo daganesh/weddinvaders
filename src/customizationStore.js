@@ -1,15 +1,43 @@
+import { WEDDING_ITEMS } from './constants';
+
+import ringsIcon        from './assets/icons/rings.svg';
+import officiantIcon    from './assets/icons/officiant.svg';
+import cateringIcon     from './assets/icons/catering.svg';
+import guestIcon        from './assets/icons/guest.svg';
+import parentBrideIcon  from './assets/icons/parent_bride.svg';
+import parentGroomIcon  from './assets/icons/parent_groom.svg';
+import discountIcon     from './assets/icons/discount.svg';
+import mineIcon         from './assets/icons/mine.svg';
+import hourglassIcon    from './assets/icons/hourglass.svg';
+import flowersIcon      from './assets/icons/flowers.svg';
+import suitIcon         from './assets/icons/suit.svg';
+import cakeIcon         from './assets/icons/cake.svg';
+
 const STORAGE_KEY = 'weddinvaders:customization:v2';
 
-export const DEFAULT_PACKAGE_ID = 'default';
+export const DEFAULT_PACKAGE_ID  = 'default';
+export const EIGHTIES_PACKAGE_ID = '80s';
+
+// Every id in WEDDING_ITEMS doubles as an `images` key, so each collectible
+// can carry its own customizable icon alongside the bride/groom/couple slots.
+const ITEM_IMAGE_KEYS = WEDDING_ITEMS.map(w => w.id);
+
+function emptyItemImages() {
+  return Object.fromEntries(ITEM_IMAGE_KEYS.map(id => [id, null]));
+}
 
 // Mirrors every currently-hardcoded value in renderer.js/constants.js/levels.js,
 // so the default package produces today's game unchanged. Also used by
 // renderer.js as its ultimate fallback when called without a config at all.
+// Every item-icon slot is null here — renderer.js falls back to the item's
+// emoji, exactly like a null bride/groom/couple slot falls back to the
+// bundled portrait PNG.
 export const DEFAULT_CONFIG = {
   images: {
     bride: null,   // data URL or null -> fall back to bundled bride-nobg.png
     groom: null,
     couple: null,
+    ...emptyItemImages(),
   },
   colors: {
     bgTop: '#1a3a70',
@@ -37,8 +65,53 @@ export const DEFAULT_CONFIG = {
   },
 };
 
-function defaultPackage() {
-  return { id: DEFAULT_PACKAGE_ID, name: 'default', isDefault: true, ...structuredClone(DEFAULT_CONFIG) };
+// Second built-in, protected package: swaps every item's icon for the
+// hand-built 80s-arcade pixel-art SVGs (see src/assets/icons/) and a matching
+// retro palette. Portraits are left unset (same bundled photos as Default).
+export const EIGHTIES_CONFIG = {
+  ...structuredClone(DEFAULT_CONFIG),
+  images: {
+    bride: null,
+    groom: null,
+    couple: null,
+    rings: ringsIcon,
+    officiant: officiantIcon,
+    catering: cateringIcon,
+    guest: guestIcon,
+    parent_bride: parentBrideIcon,
+    parent_groom: parentGroomIcon,
+    discount: discountIcon,
+    mine: mineIcon,
+    hourglass: hourglassIcon,
+    flowers: flowersIcon,
+    suit: suitIcon,
+    cake: cakeIcon,
+  },
+  colors: {
+    bgTop: '#0d0d1f',
+    bgMid: '#161636',
+    bgBot: '#0d0d1f',
+    accent: '#ffd23f',
+    brideColor: '#ff3fa0',
+    groomColor: '#33e6ff',
+  },
+};
+
+// Protected, code-defined packages available out of the box on every deploy —
+// never persisted to localStorage, can't be edited/renamed/deleted, only
+// selected as active or used as a "copy from" source for a new package.
+const SYSTEM_PACKAGES = {
+  [DEFAULT_PACKAGE_ID]:  { name: 'Default',    config: DEFAULT_CONFIG },
+  [EIGHTIES_PACKAGE_ID]: { name: '80s Arcade', config: EIGHTIES_CONFIG },
+};
+
+function isSystemId(id) {
+  return Object.prototype.hasOwnProperty.call(SYSTEM_PACKAGES, id);
+}
+
+function systemPackage(id) {
+  const { name, config } = SYSTEM_PACKAGES[id];
+  return { id, name, isDefault: true, ...structuredClone(config) };
 }
 
 // Deep-merges a partial content object (images/colors/text) over DEFAULT_CONFIG,
@@ -68,12 +141,13 @@ function readRaw() {
 }
 
 // Builds the full { activePackageId, packages } store, always including the
-// (code-defined, never persisted) default package plus any saved custom ones.
+// (code-defined, never persisted) system packages plus any saved custom ones.
 function normalizeStore(raw) {
-  const packages = { [DEFAULT_PACKAGE_ID]: defaultPackage() };
+  const packages = {};
+  for (const id of Object.keys(SYSTEM_PACKAGES)) packages[id] = systemPackage(id);
   if (raw?.packages && typeof raw.packages === 'object') {
     for (const [id, pkg] of Object.entries(raw.packages)) {
-      if (id === DEFAULT_PACKAGE_ID || !pkg || typeof pkg.name !== 'string') continue;
+      if (isSystemId(id) || !pkg || typeof pkg.name !== 'string') continue;
       packages[id] = { id, name: pkg.name, isDefault: false, ...mergeContent(pkg) };
     }
   }
@@ -86,7 +160,7 @@ function normalizeStore(raw) {
 function writeStore(store) {
   const packages = {};
   for (const [id, pkg] of Object.entries(store.packages)) {
-    if (id === DEFAULT_PACKAGE_ID) continue; // derived from code, never persisted
+    if (isSystemId(id)) continue; // derived from code, never persisted
     packages[id] = pkg;
   }
   try {
@@ -137,8 +211,9 @@ export function setActivePackage(id) {
   return id;
 }
 
-// Creates a new package seeded from another package's values (default, unless
-// a different copyFromId is given).
+// Creates a new package seeded from another package's values (default,
+// unless a different copyFromId is given — a system package or any existing
+// custom package both work).
 export function createPackage(name, copyFromId = DEFAULT_PACKAGE_ID) {
   const trimmed = (name ?? '').trim();
   if (!trimmed) throw new Error('Package name is required.');
@@ -157,9 +232,9 @@ export function createPackage(name, copyFromId = DEFAULT_PACKAGE_ID) {
   return pkg;
 }
 
-// Overwrites a non-default package's content (images/colors/text).
+// Overwrites a non-system package's content (images/colors/text).
 export function updatePackage(id, content) {
-  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package is read-only.');
+  if (isSystemId(id)) throw new Error('System packages are read-only.');
   const store = normalizeStore(readRaw());
   const existing = store.packages[id];
   if (!existing) throw new Error('Package not found.');
@@ -170,7 +245,7 @@ export function updatePackage(id, content) {
 }
 
 export function renamePackage(id, newName) {
-  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package cannot be renamed.');
+  if (isSystemId(id)) throw new Error('System packages cannot be renamed.');
   const trimmed = (newName ?? '').trim();
   if (!trimmed) throw new Error('Package name is required.');
   const store = normalizeStore(readRaw());
@@ -182,7 +257,7 @@ export function renamePackage(id, newName) {
 }
 
 export function deletePackage(id) {
-  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package cannot be removed.');
+  if (isSystemId(id)) throw new Error('System packages cannot be removed.');
   const store = normalizeStore(readRaw());
   if (!store.packages[id]) return;
   delete store.packages[id];

@@ -9,11 +9,32 @@ const WHITE_THRESHOLD = 235;
 // into another package, roughly doubling that usage.
 const MAX_DIMENSION = 480;
 
-// Reads an uploaded image file, downscales it, re-encodes it as PNG, and
-// makes near-white background pixels transparent. Runs entirely client-side
-// via canvas — a simple threshold-based chroma key, not true subject/
-// background separation, so a genuinely white shirt or dress can also get
-// faded out.
+// Reads an uploaded image file and returns a data URL ready to store in a
+// customization package's `images` field. SVGs are passed through verbatim
+// (they're already vector with their own transparency — rasterizing one
+// through the PNG pipeline below would throw away the whole point of
+// uploading a vector icon, and there's no pixel dimension to downscale).
+// Every other image type goes through fileToProcessedPngDataUrl()'s
+// downscale + chroma-key background removal.
+export function fileToImageDataUrl(file) {
+  const isSvg = file.type === 'image/svg+xml' || file.name?.toLowerCase().endsWith('.svg');
+  return isSvg ? fileToRawDataUrl(file) : fileToProcessedPngDataUrl(file);
+}
+
+function fileToRawDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Reads an uploaded raster image file, downscales it, re-encodes it as PNG,
+// and makes near-white background pixels transparent. Runs entirely
+// client-side via canvas — a simple threshold-based chroma key, not true
+// subject/background separation, so a genuinely white shirt or dress can
+// also get faded out.
 export function fileToProcessedPngDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

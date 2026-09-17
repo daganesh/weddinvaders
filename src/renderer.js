@@ -150,7 +150,7 @@ function drawBullet(ctx, b) {
 //    y+43 … y+53  HP bar (purchasable items)
 //
 
-function drawItem(ctx, item) {
+function drawItem(ctx, item, itemImg) {
   const { x, y, templateId, label, emoji, price, maxPrice, essential, flashTimer,
           incomeType, incomeAmount } = item;
 
@@ -164,13 +164,18 @@ function drawItem(ctx, item) {
   ctx.fillStyle   = bg;     ctx.fill();
   ctx.strokeStyle = border; ctx.lineWidth = essential ? 2 : 1; ctx.stroke();
 
-  // Large emoji icon — centred in upper portion of card
-  ctx.font         = '26px Arial';
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle    = '#fff';
-  ctx.fillText(emoji ?? '❓', x + ITEM_WIDTH / 2, y + 16);
-  ctx.textBaseline = 'alphabetic';
+  // Icon — a package-supplied image when set, else the item's emoji.
+  // Both are centred in the upper portion of the card.
+  if (itemImg?.complete && itemImg.naturalWidth) {
+    drawImageContain(ctx, itemImg, x + ITEM_WIDTH / 2 - 13, y + 3, 26, 26);
+  } else {
+    ctx.font         = '26px Arial';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = '#fff';
+    ctx.fillText(emoji ?? '❓', x + ITEM_WIDTH / 2, y + 16);
+    ctx.textBaseline = 'alphabetic';
+  }
 
   // Short item name label
   ctx.font      = 'bold 7px monospace';
@@ -224,7 +229,7 @@ function drawItem(ctx, item) {
 
 // ── side panel ───────────────────────────────────────────────────────────────
 
-function drawPanel(ctx, state, cfg) {
+function drawPanel(ctx, state, cfg, itemImages) {
   const { acquiredItems, currentLevel, score = 0 } = state;
   const level  = LEVELS[currentLevel] ?? LEVELS[0];
   const panelX = GAME_WIDTH;
@@ -306,11 +311,16 @@ function drawPanel(ctx, state, cfg) {
     ctx.lineWidth   = done ? 1.5 : 1;
     ctx.stroke();
 
-    ctx.font        = '20px Arial';
     ctx.textAlign   = 'center';
     ctx.globalAlpha = done ? 1 : 0.45;
-    ctx.fillStyle   = '#fff';
-    ctx.fillText(item.emoji, midX, cardY + 17);
+    const reqIcon = itemImages?.[item.id];
+    if (reqIcon?.complete && reqIcon.naturalWidth) {
+      drawImageContain(ctx, reqIcon, midX - 10, cardY + 6, 20, 20);
+    } else {
+      ctx.font      = '20px Arial';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(item.emoji, midX, cardY + 17);
+    }
 
     ctx.font      = '8px monospace';
     ctx.fillStyle = done ? '#4caf50' : '#999';
@@ -363,11 +373,16 @@ function drawPanel(ctx, state, cfg) {
       ctx.lineWidth   = acquired ? 1.5 : 1;
       ctx.stroke();
 
-      ctx.font        = '16px Arial';
       ctx.textAlign   = 'center';
       ctx.globalAlpha = acquired ? 1 : 0.30;
-      ctx.fillStyle   = '#fff';
-      ctx.fillText(item.emoji, midX, cardY + 13);
+      const optIcon = itemImages?.[item.id];
+      if (optIcon?.complete && optIcon.naturalWidth) {
+        drawImageContain(ctx, optIcon, midX - 8, cardY + 4, 16, 16);
+      } else {
+        ctx.font      = '16px Arial';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(item.emoji, midX, cardY + 13);
+      }
 
       ctx.font      = '7px monospace';
       ctx.fillStyle = acquired ? '#64b4ff' : '#555';
@@ -761,12 +776,12 @@ export function render(ctx, state, assets, config) {
   // ── Meeting scene: players physically meet ─────────────────────────────────
   if (phase === 'meeting') {
     drawMeeting(ctx, state, assets, cfg);
-    drawPanel(ctx, state, cfg);
+    drawPanel(ctx, state, cfg, assets?.items);
     return;
   }
 
   drawBackground(ctx, players, cfg);
-  for (const it of items) drawItem(ctx, it);
+  for (const it of items) drawItem(ctx, it, assets?.items?.[it.templateId]);
   for (const b of bullets) drawBullet(ctx, b);
 
   const groomImg = assets?.groom?.complete ? assets.groom : null;
@@ -780,10 +795,10 @@ export function render(ctx, state, assets, config) {
   drawMessages(ctx, messages);
   drawAdvanceAnim(ctx, advanceAnim);
   drawHUD(ctx, state);
-  drawPanel(ctx, state, cfg);
+  drawPanel(ctx, state, cfg, assets?.items);
 
   if (phase === 'levelComplete' || phase === 'gameComplete' || phase === 'lost') {
     drawOverlay(ctx, state, assets, cfg);
-    drawPanel(ctx, state, cfg);  // keep checklist visible on top of overlay
+    drawPanel(ctx, state, cfg, assets?.items);  // keep checklist visible on top of overlay
   }
 }
