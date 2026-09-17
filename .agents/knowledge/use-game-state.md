@@ -16,19 +16,33 @@ Called once per mount from `Game.jsx` (see [`game-jsx.md`](game-jsx.md)):
 const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState();
 ```
 Internally, state lives in `stateRef` (a `useRef`, not `useState` — see architecture.md's "Key
-Design Decisions") seeded by `getInitialState(levelIndex = 0)` (`useGameState.js:85`).
+Design Decisions") seeded by `getInitialState(levelIndex = 0, mode = 'couple', soloRole = null)`
+(`useGameState.js:107`).
+
+### Solo mode: `topRole`/`bottomRole`
+`mode` (`'couple'`/`'solo'`) and `soloRole` (`'bride'`/`'groom'`/`null`) are stored in state and
+carried through every level/restart transition (`getInitialState`'s callers all pass `s.mode,
+s.soloRole` through — see `handleAction`/`onKey` below). Rather than hardcoding "groom is always the
+top-right mover, bride is always the bottom-left mover" (true in Couple mode and Solo-as-Bride),
+`getInitialState` also computes `topRole`/`bottomRole` — swapped to `bride`/`groom` when
+`soloRole === 'groom'`, so the human always starts at the bottom regardless of which character they
+picked. Every place that used to read `players.groom`/`players.bride` positionally (row-advance,
+the meeting check, `spawnItem`'s row bounds, the `N`-key fast-forward, and `shoot()`'s bullet
+direction/spawn side) now reads `players[topRole]`/`players[bottomRole]` instead, so the inversion
+doesn't require special-casing groom vs. bride anywhere in that math — see `renderer.md` for the
+rendering-side equivalent (`isTop` passed to `drawPlayer`).
 
 ## Key Surface
 | Export / function | Line | Purpose |
 |---|---|---|
-| `getInitialState(levelIndex)` | 97 | Builds a fresh state object for a given level (money, ammo, players, timers, `slowTimer`). Authoritative shape — a field missing here becomes `undefined` after a level restart. |
-| `useGameState()` | 125 | The hook itself; returns `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }`. |
-| `onKey(e)` (internal, in the hook's keyboard effect) | 141 | Routes `keydown`/`keyup`. Non-`playing` phases (title/meeting/levelComplete/gameComplete/lost) advance on any key; while `playing`, dispatches shoot/cycle-ammo. |
-| `shoot(role)` | 227 | Validates ammo/money, deducts cost, spawns a bullet. Called for both keyboard shortcuts and `handleAction({type:'SHOOT'})`. |
-| `update()` | 258 | Runs every animation frame: row advance (rate-adjusted, see below), player movement (`moveX`), bullet travel, item spawn/movement, escaped-item life loss, **bullet↔item collision** (inline, not a separate function), win/lose phase transition. |
-| `loop()` / `startLoop()` / `stopLoop()` | 449–460 | `requestAnimationFrame` driver; calls `update()` then the render callback registered via `setRenderCallback`. |
-| `handleAction(action)` | 466 | Dispatch table for UI-originated actions: `START`, `RESTART`, `NEXT_LEVEL`, `SHOOT`, `SELECT_AMMO` — used by `Game.jsx`'s click handler and on-screen mobile buttons. |
-| `spawnItem(groomRow, brideRow, level, acquiredItems)` (internal) | 48 | Builds one flying item from the level's weighted spawn pool; randomizes `incomeAmount` for guest/family items. **Not customization-aware**: the spawned item's `label` (used later for the floating pickup message in `drawMessages`, `renderer.js`) is copied straight from `WEDDING_ITEMS` in `constants.js` at spawn time. If an admin customizes the "Her Family"/"His Family" labels via `customizationStore.js`, already-spawned/queued items still show the old label in their floating "+$400 Her Family" toast — only the side-panel checklist (which resolves labels live via `renderer.js`'s `getItemLabel(item, cfg)`) reflects the change immediately. Known v1 limitation, not a bug. |
+| `getInitialState(levelIndex, mode, soloRole)` | 107 | Builds a fresh state object for a given level/mode (money, ammo, players, timers, `slowTimer`, `topRole`/`bottomRole`). Authoritative shape — a field missing here becomes `undefined` after a level restart. |
+| `useGameState()` | 142 | The hook itself; returns `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }`. |
+| `onKey(e)` (internal, in the hook's keyboard effect) | 203 | Routes `keydown`/`keyup`. Non-`playing` phases advance on any key (title → `modeSelect`); while `playing`, dispatches shoot/cycle-ammo **only for the controllable role(s)** — in solo mode the waiting role's keys are ignored via `brideControllable`/`groomControllable` checks. |
+| `shoot(role)` | 165 | Validates ammo/money and that `role` is controllable in the current mode, deducts cost, spawns a bullet — direction (`vy`, spawn `y`) is based on `role === s.topRole`, not the role identity, so solo-as-groom (now in the bottom slot) shoots upward correctly. Called for both keyboard shortcuts and `handleAction({type:'SHOOT'})`. |
+| `update()` | 287 | Runs every animation frame: row advance (rate-adjusted, see below, using `topRole`/`bottomRole`), player movement (`moveX`, gated per-role by controllability), bullet travel, item spawn/movement, escaped-item life loss, **bullet↔item collision** (inline, not a separate function), win/lose phase transition. |
+| `loop()` / `startLoop()` / `stopLoop()` | ~496–510 | `requestAnimationFrame` driver; calls `update()` then the render callback registered via `setRenderCallback`. |
+| `handleAction(action)` | 517 | Dispatch table for UI-originated actions: `START` (→ `modeSelect`), `CHOOSE_MODE` (→ fresh `playing` state via `getInitialState(0, mode, soloRole)`), `RESTART`, `NEXT_LEVEL`, `SHOOT`, `CYCLE_AMMO`, `SWIPE_MOVE`, `SELECT_AMMO` — used by `Game.jsx`'s click/touch handlers and on-screen mobile buttons. `RESTART`/`NEXT_LEVEL` preserve the current `mode`/`soloRole` rather than resetting to Couple. `SWIPE_MOVE` (mobile swipe gesture) adds a synthetic key to `keysRef` for ~220ms so it rides the same continuous `moveX` mechanic as a real key-hold, rather than duplicating movement math. |
+| `spawnItem(topRow, bottomRow, level, acquiredItems)` (internal) | 48 | Builds one flying item from the level's weighted spawn pool; randomizes `incomeAmount` for guest/family items. **Not customization-aware**: the spawned item's `label` (used later for the floating pickup message in `drawMessages`, `renderer.js`) is copied straight from `WEDDING_ITEMS` in `constants.js` at spawn time. If an admin customizes the "Her Family"/"His Family" labels via `customizationStore.js`, already-spawned/queued items still show the old label in their floating "+$400 Her Family" toast — only the side-panel checklist (which resolves labels live via `renderer.js`'s `getItemLabel(item, cfg)`) reflects the change immediately. Known v1 limitation, not a bug. |
 | `pickWeighted(pool)` (internal) | 38 | Cumulative-weight random pick over a pool's `spawnWeight` fields — used by `spawnItem()` instead of a uniform pick. See `constants.md`'s `WEDDING_ITEMS.spawnWeight`. |
 
 ### Row-advance rate (inside `update()`, ~lines 279–290)
