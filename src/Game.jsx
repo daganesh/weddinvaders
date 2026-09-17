@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useGameState } from './useGameState';
 import { useAssets }    from './useAssets';
 import { useCustomization } from './useCustomization';
@@ -7,11 +7,21 @@ import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
 import './Game.css';
 
+const SWIPE_THRESHOLD = 30; // px of horizontal touch travel that counts as a swipe, not a tap
+
 export default function Game() {
   const canvasRef = useRef(null);
   const assetsRef = useAssets();
   const configRef = useCustomization();
   const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState();
+
+  // Mirrors of ref-based game state, updated only when they actually change
+  // (from the render callback) — game state stays ref-based for 60fps
+  // perf, but which DOM controls to show needs to react to phase/mode.
+  const [uiPhase, setUiPhase] = useState('title');
+  const [uiMode, setUiMode] = useState('couple');
+  const [uiSoloRole, setUiSoloRole] = useState(null);
+  const prevPhaseRef = useRef('title');
 
   useEffect(() => {
     setRenderCallback((state) => {
@@ -19,18 +29,47 @@ export default function Game() {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       render(ctx, state, assetsRef.current, configRef.current);
+
+      if (state.phase !== prevPhaseRef.current) {
+        prevPhaseRef.current = state.phase;
+        setUiPhase(state.phase);
+        setUiMode(state.mode);
+        setUiSoloRole(state.soloRole);
+      }
     });
     startLoop();
     return () => stopLoop();
   }, [startLoop, stopLoop, setRenderCallback, assetsRef, configRef]);
 
   const handleCanvasClick = useCallback(() => {
-    const { phase } = getState();
-    if (phase === 'title')         handleAction({ type: 'START' });
+    const { phase, mode, soloRole } = getState();
+    if (phase === 'title')         { handleAction({ type: 'START' }); return; }
+    if (phase === 'playing' && mode === 'solo') { handleAction({ type: 'SHOOT', role: soloRole }); return; }
     if (phase === 'meeting')       handleAction({ type: 'NEXT_LEVEL' });
     if (phase === 'levelComplete') handleAction({ type: 'NEXT_LEVEL' });
     if (phase === 'gameComplete')  handleAction({ type: 'RESTART' });
     if (phase === 'lost')          handleAction({ type: 'RESTART' });
+  }, [getState, handleAction]);
+
+  // ── solo mode: swipe left/right on the canvas to move ────────────────────
+  // A tap (little/no horizontal travel) falls through to the browser's
+  // synthesized click, which handleCanvasClick treats as "shoot"; a real
+  // swipe is suppressed from also firing that click by the browser itself,
+  // so tap-to-shoot and swipe-to-move don't fight over the same gesture.
+  const touchStartXRef = useRef(null);
+  const handleTouchStart = useCallback((e) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  }, []);
+  const handleTouchEnd = useCallback((e) => {
+    const startX = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (startX == null) return;
+    const { phase, mode, soloRole } = getState();
+    if (phase !== 'playing' || mode !== 'solo') return;
+    const endX = e.changedTouches[0]?.clientX ?? startX;
+    const deltaX = endX - startX;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+    handleAction({ type: 'SWIPE_MOVE', role: soloRole, direction: deltaX > 0 ? 'right' : 'left' });
   }, [getState, handleAction]);
 
   // ── mobile / on-screen controls ──────────────────────────────────────────
@@ -41,6 +80,8 @@ export default function Game() {
   const activeConfig = getActiveConfig();
   const { brideColor, groomColor } = activeConfig.colors;
   const { bride: brideName, groom: groomName } = activeConfig.text.names;
+
+  const showControls = uiPhase !== 'title' && uiPhase !== 'modeSelect';
 
   return (
     <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
@@ -55,64 +96,104 @@ export default function Game() {
           </button>
         </div>
 
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={GAME_HEIGHT}
-          onClick={handleCanvasClick}
-          className="game-canvas"
-        />
+        <div className="canvas-wrapper">
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_WIDTH}
+            height={GAME_HEIGHT}
+            onClick={handleCanvasClick}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="game-canvas"
+          />
 
-        {/* On-screen buttons (visible on touch devices) */}
-        <div className="mobile-controls">
-          <div className="mobile-player bride-controls">
-            <div className="ammo-buttons">
-              {ammoKeys.map(a => (
-                <button
-                  key={a.id}
-                  className="ammo-btn"
-                  style={{ '--ammo-color': a.color }}
-                  onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'bride', ammoType: a.id })}
-                  title={a.description}
-                >
-                  {a.label}
-                </button>
-              ))}
+          {uiPhase === 'modeSelect' && (
+            <div className="mode-select-overlay">
+              <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
+                👰🤵 Couple
+              </button>
+              <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'bride' })}>
+                👰 Solo as {brideName}
+              </button>
+              <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'groom' })}>
+                🤵 Solo as {groomName}
+              </button>
             </div>
-            <button
-              className="shoot-btn bride-shoot"
-              onPointerDown={() => handleAction({ type: 'SHOOT', role: 'bride' })}
-            >
-              👰 SHOOT
-            </button>
-          </div>
-
-          <div className="mobile-player groom-controls">
-            <div className="ammo-buttons">
-              {ammoKeys.map(a => (
-                <button
-                  key={a.id}
-                  className="ammo-btn"
-                  style={{ '--ammo-color': a.color }}
-                  onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'groom', ammoType: a.id })}
-                  title={a.description}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-            <button
-              className="shoot-btn groom-shoot"
-              onPointerDown={() => handleAction({ type: 'SHOOT', role: 'groom' })}
-            >
-              🤵 SHOOT
-            </button>
-          </div>
+          )}
         </div>
 
+        {/* On-screen buttons (visible on touch devices) */}
+        {showControls && uiMode === 'couple' && (
+          <div className="mobile-controls">
+            <div className="mobile-player bride-controls">
+              <div className="ammo-buttons">
+                {ammoKeys.map(a => (
+                  <button
+                    key={a.id}
+                    className="ammo-btn"
+                    style={{ '--ammo-color': a.color }}
+                    onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'bride', ammoType: a.id })}
+                    title={a.description}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="shoot-btn bride-shoot"
+                onPointerDown={() => handleAction({ type: 'SHOOT', role: 'bride' })}
+              >
+                👰 SHOOT
+              </button>
+            </div>
+
+            <div className="mobile-player groom-controls">
+              <div className="ammo-buttons">
+                {ammoKeys.map(a => (
+                  <button
+                    key={a.id}
+                    className="ammo-btn"
+                    style={{ '--ammo-color': a.color }}
+                    onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'groom', ammoType: a.id })}
+                    title={a.description}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="shoot-btn groom-shoot"
+                onPointerDown={() => handleAction({ type: 'SHOOT', role: 'groom' })}
+              >
+                🤵 SHOOT
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showControls && uiMode === 'solo' && (
+          <div className="solo-controls">
+            <span className="solo-controls-hint">Swipe canvas to move · Tap to shoot</span>
+            <button
+              className="ammo-switch-btn"
+              onClick={() => handleAction({ type: 'CYCLE_AMMO', role: uiSoloRole, dir: 1 })}
+            >
+              🔄 Switch Ammo
+            </button>
+          </div>
+        )}
+
         <div className="key-legend">
-          <span>👰 {brideName} — A/D move · S ammo · W shoot</span>
-          <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</span>
+          {uiMode === 'couple' ? (
+            <>
+              <span>👰 {brideName} — A/D move · S ammo · W shoot</span>
+              <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</span>
+            </>
+          ) : uiSoloRole === 'bride' ? (
+            <span>👰 {brideName} — A/D move · S ammo · W shoot (or swipe/tap)</span>
+          ) : (
+            <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot (or swipe/tap)</span>
+          )}
         </div>
       </div>
     </div>
