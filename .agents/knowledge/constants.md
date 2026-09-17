@@ -26,6 +26,7 @@ It's the highest-fan-in module in the repo — imported by `levels.js`, `useGame
 | `GAME_DURATION`, `ROW_ADVANCE_INTERVAL` | 71–72 | Fallback timing (also overridden per level by `gameDuration`/`rowAdvance` in `levels.js`). |
 | `ROW_ADVANCE_SPEEDUP` | 73 | Multiplier applied to the row-advance rate once all required items are acquired (default `2.5`). See `game-design.md`'s "Row-Advance Pacing". |
 | `HOURGLASS_SLOW_SECONDS` | 74 | Real seconds the `hourglass` item halves the row-advance rate for (default `15`). |
+| `NO_AMMO_FASTFORWARD` | 75 | Speed multiplier applied to the timer/row-advance tick rate once cash, invites, and hearts are all exhausted (default `10`) — see `game-design.md`'s "Row-Advance Pacing" and `use-game-state.md`. |
 
 ## Relationships / Cross-links
 - Consumed by `src/levels.js` (`WEDDING_ITEMS` → `getSpawnPool()`), `src/useGameState.js`, `src/renderer.js`, and `src/Game.jsx` — see [`use-game-state.md`](use-game-state.md), [`renderer.md`](renderer.md), [`game-jsx.md`](game-jsx.md).

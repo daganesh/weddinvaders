@@ -31,17 +31,32 @@ Design Decisions") seeded by `getInitialState(levelIndex = 0)` (`useGameState.js
 | `spawnItem(groomRow, brideRow, level, acquiredItems)` (internal) | 48 | Builds one flying item from the level's weighted spawn pool; randomizes `incomeAmount` for guest/family items. **Not customization-aware**: the spawned item's `label` (used later for the floating pickup message in `drawMessages`, `renderer.js`) is copied straight from `WEDDING_ITEMS` in `constants.js` at spawn time. If an admin customizes the "Her Family"/"His Family" labels via `customizationStore.js`, already-spawned/queued items still show the old label in their floating "+$400 Her Family" toast — only the side-panel checklist (which resolves labels live via `renderer.js`'s `getItemLabel(item, cfg)`) reflects the change immediately. Known v1 limitation, not a bug. |
 | `pickWeighted(pool)` (internal) | 38 | Cumulative-weight random pick over a pool's `spawnWeight` fields — used by `spawnItem()` instead of a uniform pick. See `constants.md`'s `WEDDING_ITEMS.spawnWeight`. |
 
-### Row-advance rate (inside `update()`, ~lines 279–284)
+### Row-advance rate (inside `update()`, ~lines 279–290)
 ```js
 const requiredDone = isLevelComplete(level, acquiredItems); // this frame's incoming items
 let advanceRate = requiredDone ? ROW_ADVANCE_SPEEDUP : 1;
 if (slowTimer > 0) advanceRate *= 0.5;
+
+const outOfAmmo = money < 100 && ammo.invite <= 0 && ammo.heart <= 0;
+const tickInterval = outOfAmmo ? Math.max(1, Math.round(FPS / NO_AMMO_FASTFORWARD)) : FPS;
+
+if (frame % tickInterval === 0) {
+  time = Math.max(0, time - 1);
+  rowAdvanceTimer += advanceRate;
+}
 ```
 `rowAdvanceTimer` accumulates by `advanceRate` per second instead of a flat `1` — speeding up once
 the level's required items are all acquired, tempered (halved) while an hourglass pickup's
 `slowTimer` is active. The `incomeType === 'time'` collision branch (~line 395) sets
 `slowTimer = HOURGLASS_SLOW_SECONDS * FPS` when an hourglass item is shot down. See
 `game-design.md`'s "Row-Advance Pacing".
+
+Once every ammo type is spent (`outOfAmmo`), neither player can act again, so `tickInterval` shrinks
+from once-per-second (`FPS` frames) to `FPS / NO_AMMO_FASTFORWARD` frames — the "1 game-second per
+tick" cadence (and its `advanceAnim`/row-step animation) is preserved, just compressed in real time,
+so the level races to its win/lose outcome instead of idling out the real-time clock. This only
+scales the timer/row-advance ticks; `slowTimer`'s own countdown and item spawning/movement still run
+at their normal per-frame rate.
 
 ### Controls (verified against `onKey`/`moveX`, `useGameState.js:186–191,296–297`)
 - **Bride**: `KeyA`/`KeyD` move, `KeyW` shoot, `KeyS` cycle ammo.
