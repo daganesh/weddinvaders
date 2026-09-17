@@ -64,6 +64,14 @@
   font-size: 12px;
 }
 
+/* Every plain button on this screen gets an explicit background + text
+   color, so none of them can end up unreadable (e.g. white-on-white) under
+   a browser/OS light color-scheme preference. */
+.admin-screen button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+}
+
 .admin-color-row {
   display: flex;
   align-items: center;
@@ -143,6 +151,21 @@
   margin-bottom: 4px;
 }
 
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 6px;
+  margin: 28px 0 12px;
+}
+
+.admin-section-header h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin: 0;
+}
+
 .admin-package-list {
   display: flex;
   flex-wrap: wrap;
@@ -153,7 +176,6 @@
 .admin-package-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -168,30 +190,27 @@
   background: rgba(255, 215, 0, 0.12);
 }
 
-.admin-active-tag {
-  font-size: 10px;
+.admin-active-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  flex-shrink: 0;
+}
+
+.admin-package-chip .admin-active-dot {
+  margin-left: 6px;
+}
+
+.admin-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #4caf50;
-  border: 1px solid #4caf50;
-  border-radius: 999px;
-  padding: 1px 6px;
-}
-
-.admin-active-tag-standalone {
-  display: inline-block;
-  margin-top: 8px;
-}
-
-.admin-package-new {
-  display: flex;
-  gap: 8px;
-}
-
-.admin-package-new input {
-  flex: 1;
-  padding: 6px 8px;
-  font-size: 13px;
 }
 
 .admin-package-detail {
@@ -213,16 +232,45 @@
   flex: 1;
 }
 
+.admin-package-title {
+  border-bottom: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
 .admin-hint {
   font-size: 13px;
   color: #999;
   margin-bottom: 8px;
 }
 
-.admin-delete {
-  background: rgba(244, 67, 54, 0.15) !important;
-  border-color: #f44336 !important;
-  color: #ff8a80 !important;
+.admin-icon-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eee;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.admin-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-icon-btn-danger {
+  border-color: #f44336;
+  background: rgba(244, 67, 54, 0.15);
+  color: #ff8a80;
 }
 
 .admin-fieldset {
@@ -233,4 +281,42 @@
 
 .admin-fieldset:disabled {
   opacity: 0.6;
+}
+
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  padding: 16px;
+}
+
+.admin-modal {
+  background: #14141f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 20px;
+  width: 320px;
+  max-width: 100%;
+}
+
+.admin-modal h3 {
+  font-size: 15px;
+  color: #ffd700;
+  margin-bottom: 14px;
+}
+
+.admin-modal select {
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }

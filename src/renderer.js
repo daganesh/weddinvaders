@@ -607,8 +607,8 @@ function drawTitle(ctx, cfg) {
   ctx.fillText(cfg.text.tagline, GAME_WIDTH / 2, 188);
 
   const lines = [
-    '👰 Bride  —  A/D move   ·   S ammo   ·   W shoot',
-    '🤵 Groom  —  ←/→ move   ·   ↑/↓ ammo   ·   Space shoot',
+    `👰 ${cfg.text.names.bride}  —  A/D move   ·   S ammo   ·   W shoot`,
+    `🤵 ${cfg.text.names.groom}  —  ←/→ move   ·   ↑/↓ ammo   ·   Space shoot`,
     '',
     '💵 Cash shoots at items to buy them',
     '💌 Send invites to guests — they attend & bring gift money!',
