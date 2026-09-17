@@ -40,9 +40,12 @@ Game.jsx                          → knowledge/game-jsx.md
   ├── useGameState()  →  stateRef (never React state — avoids re-renders)
   │                                → knowledge/use-game-state.md
   ├── useAssets()     →  assetsRef
+  ├── uiPhase/uiMode/uiSoloRole  ←  lightweight React-state mirrors, updated
+  │                                 only on phase change (drive mode-select
+  │                                 overlay + couple/solo control swap)
   └── requestAnimationFrame loop:
         update(stateRef)   ← pure mutation via setState(updater)
-        render(ctx, state, assets)
+        render(ctx, state, assets, config)
                                    → knowledge/renderer.md
 ```
 Both `useGameState.js` and `renderer.js` read shared data/config from
@@ -90,6 +93,21 @@ page's bottom `.admin-actions` bar — so an error raised by an action taken *in
 state, since that renders into `.admin-actions` and would be invisible behind the modal. Show it
 with modal-local state instead (see the new-package modal's `modalError`) and keep the modal open
 on failure so the user can see the message and retry.
+
+### Game Modes
+
+Two modes, chosen at a `modeSelect` phase reached from the title screen: **Couple** (both roles
+controllable, the original/default game) and **Solo** (one human-picked role — bride or groom —
+controllable; the other is a parked, occasionally-blinking placeholder, aimed at mobile players who
+want simpler one-thumb controls: swipe to move, tap to shoot, one button to cycle ammo). Rather than
+hardcoding "groom starts top-right, bride starts bottom-left" throughout the row-advance/meeting/
+spawn math, `getInitialState()` (`useGameState.js`) computes `topRole`/`bottomRole` once per level —
+swapped when playing solo as groom, so the human always starts at the bottom regardless of which
+character they picked — and every place that used to key off `players.bride`/`players.groom`
+positionally reads `players[topRole]`/`players[bottomRole]` instead. See `use-game-state.md`'s "Solo
+mode" section for the full rationale and `renderer.md`'s `drawPlayer` (`isTop`/`waiting` params) for
+the rendering-side equivalent. `game-jsx.md` covers the DOM side: the `modeSelect` overlay and the
+solo-only mobile control surface.
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.

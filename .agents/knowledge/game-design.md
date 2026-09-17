@@ -7,17 +7,35 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 | Phase | Description |
 |-------|-------------|
 | `title` | Start screen — explains controls + ammo types |
+| `modeSelect` | Choose Couple or Solo (and which character) before the first level — see "Game Modes" below |
 | `playing` | Main gameplay loop |
 | `meeting` | Players reached the same row → couple image shown, then level result |
 | `levelComplete` | Time ran out with all required items bought → next level |
 | `gameComplete` | All 5 levels cleared |
 | `lost` | Ran out of lives, money went negative, or met without completing requirements |
 
+## Game Modes
+- **Couple** (default/original) — both bride and groom are controllable, exactly as described below.
+- **Solo** — chosen at the `modeSelect` screen (Couple / Solo as Bride / Solo as Groom), reached from
+  the title screen. Only the chosen role can move/shoot/cycle ammo; the other role is a parked,
+  occasionally-blinking placeholder at its starting corner (mainly for mobile, where the controls
+  are simplified to swipe-to-move, tap-canvas-to-shoot, and a single "switch ammo" button — see
+  `game-jsx.md`). **The human-controlled character always starts at the bottom row** — playing solo
+  as groom inverts which physical corner groom/bride start from (groom takes bride's usual
+  bottom-left start and shoots upward instead of down), rather than groom always starting top-right.
+  The row-advance/timer/win-lose rules are otherwise **unchanged** from Couple mode — solo is simply
+  harder because only one shooter is acting against the same pace. See `use-game-state.md`'s
+  `topRole`/`bottomRole` for how the inversion is implemented without hardcoding role names into the
+  convergence math.
+
 ## Players
 - **Groom** — starts top-right (row 0), moves down. Controls: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot.
 - **Bride** — starts bottom-left (row 8), moves up. Controls: A/D move, W shoot, S cycle ammo.
 - Both move one row at a time on a timed `rowAdvanceTimer`.
 - Key bindings are handled in `onKey()` / `moveX()` in [`knowledge/use-game-state.md`](use-game-state.md).
+- In Solo mode, only the chosen role's keys/taps do anything; the other role's inputs are ignored so
+  it stays parked (see "Game Modes"). The starting corner/movement direction described above is
+  Couple mode's default and Solo-as-Bride's layout — Solo-as-Groom swaps it.
 
 ## Ammo Types
 | Type | Key | Cost | Effect |

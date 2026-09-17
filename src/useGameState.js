@@ -20,12 +20,15 @@ function rowToY(row) {
   return row * ROW_HEIGHT + (ROW_HEIGHT - PLAYER_HEIGHT) / 2;
 }
 
-function makePlayer(role) {
-  const isGroom = role === 'groom';
-  const row     = isGroom ? GROOM_START_ROW : BRIDE_START_ROW;
+// `isTop` picks the physical starting corner (top-right, moving down vs.
+// bottom-left, moving up) independent of role identity — in solo mode
+// playing as groom, the human always starts at the bottom, so groom takes
+// the "isTop = false" slot instead of its couple-mode default.
+function makePlayer(role, isTop) {
+  const row = isTop ? GROOM_START_ROW : BRIDE_START_ROW;
   return {
     role,
-    x:            isGroom ? GROOM_START_X : BRIDE_START_X,
+    x:            isTop ? GROOM_START_X : BRIDE_START_X,
     y:            rowToY(row),
     row,
     speed:        PLAYER_SPEED,
@@ -45,9 +48,9 @@ function pickWeighted(pool) {
   return pool[pool.length - 1];
 }
 
-function spawnItem(groomRow, brideRow, level, acquiredItems = []) {
-  const minRow = groomRow + 1;
-  const maxRow = brideRow  - 1;
+function spawnItem(topRow, bottomRow, level, acquiredItems = []) {
+  const minRow = topRow + 1;
+  const maxRow = bottomRow - 1;
   if (minRow > maxRow) return null;
 
   // Don't re-spawn purchasable/discount items already acquired — only income & mines keep spawning
@@ -94,11 +97,25 @@ function spawnItem(groomRow, brideRow, level, acquiredItems = []) {
 
 // ── initial state ──────────────────────────────────────────────────────────
 
-export function getInitialState(levelIndex = 0) {
+// `mode` is 'couple' (both players controllable, groom top/bride bottom as
+// always) or 'solo' (only `soloRole` is controllable; the other role is a
+// parked, blinking placeholder). In solo mode the human always starts at the
+// bottom row, so soloRole='groom' swaps which role occupies the top/bottom
+// starting slot; row-advance/meeting logic below reads `topRole`/`bottomRole`
+// rather than hardcoding groom=top, so this inversion doesn't have to touch
+// the convergence math itself.
+export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null) {
   const idx   = Math.min(levelIndex, LEVELS.length - 1);
   const level = LEVELS[idx];
+  const invert  = mode === 'solo' && soloRole === 'groom';
+  const topRole    = invert ? 'bride' : 'groom';
+  const bottomRole = invert ? 'groom' : 'bride';
   return {
     phase:           'title',
+    mode,
+    soloRole,
+    topRole,
+    bottomRole,
     currentLevel:    idx,
     frame:           0,
     time:            level.gameDuration,
@@ -106,7 +123,7 @@ export function getInitialState(levelIndex = 0) {
     ammo:            { invite: level.invites, heart: level.hearts },
     discount:        1,
     lives:           3,
-    players:         { bride: makePlayer('bride'), groom: makePlayer('groom') },
+    players:         { [topRole]: makePlayer(topRole, true), [bottomRole]: makePlayer(bottomRole, false) },
     bullets:         [],
     items:           [],
     acquiredItems:   [],
@@ -136,18 +153,19 @@ export function useGameState() {
 
   // ── helpers that update state ─────────────────────────────────────────
 
-  const cycleAmmoFor = (role, dir) => {
+  const cycleAmmoFor = useCallback((role, dir) => {
     setState(s => {
       const cur  = s.players[role].selectedAmmo;
       const idx  = AMMO_ORDER.indexOf(cur);
       const next = AMMO_ORDER[(idx + dir + AMMO_ORDER.length) % AMMO_ORDER.length];
       return { ...s, players: { ...s.players, [role]: { ...s.players[role], selectedAmmo: next } } };
     });
-  };
+  }, []);
 
   const shoot = useCallback((role) => {
     setState(s => {
       if (s.phase !== 'playing') return s;
+      if (s.mode === 'solo' && role !== s.soloRole) return s; // waiting player can't act
       const player   = s.players[role];
       if (!player.alive) return s;
 
@@ -156,9 +174,13 @@ export function useGameState() {
       if (ammoType === 'invite' && s.ammo.invite  <= 0)  return s;
       if (ammoType === 'heart'  && s.ammo.heart   <= 0)  return s;
 
-      const vy = role === 'groom' ? BULLET_SPEED : -BULLET_SPEED;
+      // Direction depends on which physical slot this role occupies (top
+      // shoots down, bottom shoots up), not the role identity itself — in
+      // solo-as-groom, groom occupies the bottom slot instead of its usual top.
+      const isTop = role === s.topRole;
+      const vy = isTop ? BULLET_SPEED : -BULLET_SPEED;
       const bx = player.x + PLAYER_WIDTH  / 2 - BULLET_WIDTH  / 2;
-      const by = role === 'groom' ? player.y + PLAYER_HEIGHT : player.y - BULLET_HEIGHT;
+      const by = isTop ? player.y + PLAYER_HEIGHT : player.y - BULLET_HEIGHT;
 
       const newMoney = ammoType === 'cash' ? s.money - 100 : s.money;
       const newAmmo  = ammoType !== 'cash'
@@ -186,14 +208,14 @@ export function useGameState() {
       const s = getState();
 
       if (s.phase === 'title' && e.type === 'keydown') {
-        setState(s => ({ ...s, phase: 'playing' })); return;
+        setState(s => ({ ...s, phase: 'modeSelect' })); return;
       }
 
       // Meeting scene: any key advances once the couple image has appeared (>= 80 frames)
       if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 80) {
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' });
         } else {
           setState(s => ({ ...s, phase: 'gameComplete' }));
         }
@@ -202,13 +224,13 @@ export function useGameState() {
 
       if (s.phase === 'levelComplete' && e.type === 'keydown') {
         const nextLevel = s.currentLevel + 1;
-        setState({ ...getInitialState(nextLevel), phase: 'playing' }); return;
+        setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' }); return;
       }
       if (s.phase === 'gameComplete' && e.type === 'keydown') {
         setState({ ...getInitialState(0), phase: 'title' }); return;
       }
       if (s.phase === 'lost' && e.code === 'KeyR' && e.type === 'keydown') {
-        setState({ ...getInitialState(0), phase: 'playing' }); return;
+        setState({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' }); return;
       }
 
       if (s.phase !== 'playing') return;
@@ -219,29 +241,36 @@ export function useGameState() {
           const level = LEVELS[s.currentLevel];
           if (isLevelComplete(level, s.acquiredItems)) {
             setState(s => {
-              const gRow = s.players.groom.row;
-              const bRow = s.players.bride.row;
-              if (gRow >= bRow) return s;
-              const newGRow = gRow + 1;
-              const newBRow = bRow - 1;
+              const { topRole, bottomRole } = s;
+              const topRow = s.players[topRole].row;
+              const botRow = s.players[bottomRole].row;
+              if (topRow >= botRow) return s;
+              const newTopRow = topRow + 1;
+              const newBotRow = botRow - 1;
               const newPlayers = {
-                groom: { ...s.players.groom, row: newGRow, y: rowToY(newGRow) },
-                bride: { ...s.players.bride, row: newBRow, y: rowToY(newBRow) },
+                ...s.players,
+                [topRole]:    { ...s.players[topRole],    row: newTopRow, y: rowToY(newTopRow) },
+                [bottomRole]: { ...s.players[bottomRole], row: newBotRow, y: rowToY(newBotRow) },
               };
-              const newItems = s.items.filter(it => it.row > newGRow && it.row < newBRow);
+              const newItems = s.items.filter(it => it.row > newTopRow && it.row < newBotRow);
               return { ...s, players: newPlayers, items: newItems, rowAdvanceTimer: 0, advanceAnim: 60 };
             });
           }
           return;
         }
 
+        // Only the controllable role(s) respond — in solo mode the waiting
+        // role's keys are ignored so it stays parked.
+        const brideControllable = s.mode !== 'solo' || s.soloRole === 'bride';
+        const groomControllable = s.mode !== 'solo' || s.soloRole === 'groom';
+
         // Bride: S cycle ammo, W shoot; A/D move (handled in update loop)
-        if (e.code === 'KeyS') cycleAmmoFor('bride',  1);
-        if (e.code === 'KeyW') shoot('bride');
+        if (brideControllable && e.code === 'KeyS') cycleAmmoFor('bride',  1);
+        if (brideControllable && e.code === 'KeyW') shoot('bride');
         // Groom: ↑/↓ cycle ammo, Space/Enter shoot; ←/→ move in update loop
-        if (e.code === 'ArrowUp')   cycleAmmoFor('groom', -1);
-        if (e.code === 'ArrowDown') cycleAmmoFor('groom',  1);
-        if (e.code === 'Space' || e.code === 'Enter') shoot('groom');
+        if (groomControllable && e.code === 'ArrowUp')   cycleAmmoFor('groom', -1);
+        if (groomControllable && e.code === 'ArrowDown') cycleAmmoFor('groom',  1);
+        if (groomControllable && (e.code === 'Space' || e.code === 'Enter')) shoot('groom');
       }
     };
 
@@ -251,7 +280,7 @@ export function useGameState() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('keyup',   onKey);
     };
-  }, []);
+  }, [cycleAmmoFor, shoot]);
 
   // ── main update (runs every frame) ────────────────────────────────────
 
@@ -265,6 +294,7 @@ export function useGameState() {
 
       const level = LEVELS[s.currentLevel];
 
+      const { mode, soloRole, topRole, bottomRole } = s;
       let { frame, time, money, ammo, discount, lives,
             players, bullets, items, acquiredItems,
             messages, score, spawnTimer, rowAdvanceTimer, advanceAnim,
@@ -295,21 +325,24 @@ export function useGameState() {
       let newPlayers = players;
       if (rowAdvanceTimer >= level.rowAdvance) {
         rowAdvanceTimer = 0;
-        const gRow = players.groom.row;
-        const bRow = players.bride.row;
-        if (gRow < bRow) {
-          const newGRow = gRow + 1;
-          const newBRow = bRow - 1;
+        const topRow = players[topRole].row;
+        const botRow = players[bottomRole].row;
+        if (topRow < botRow) {
+          const newTopRow = topRow + 1;
+          const newBotRow = botRow - 1;
           newPlayers = {
-            groom: { ...players.groom, row: newGRow, y: rowToY(newGRow) },
-            bride: { ...players.bride, row: newBRow, y: rowToY(newBRow) },
+            ...players,
+            [topRole]:    { ...players[topRole],    row: newTopRow, y: rowToY(newTopRow) },
+            [bottomRole]: { ...players[bottomRole], row: newBotRow, y: rowToY(newBotRow) },
           };
           advanceAnim = 60;
-          items = items.filter(it => it.row > newGRow && it.row < newBRow);
+          items = items.filter(it => it.row > newTopRow && it.row < newBotRow);
         }
       }
 
       // ── player left / right movement ────────────────────────────────
+      // In solo mode only the controllable role responds to keys — the
+      // waiting role stays parked at its corner.
       const keys = keysRef.current;
       const moveX = (p, leftKey, rightKey) => {
         if (!p.alive) return p;
@@ -318,9 +351,12 @@ export function useGameState() {
         if (keys.has(rightKey)) x = Math.min(GAME_WIDTH - PLAYER_WIDTH, x + p.speed);
         return x !== p.x ? { ...p, x } : p;
       };
+      const groomControllable = mode !== 'solo' || soloRole === 'groom';
+      const brideControllable = mode !== 'solo' || soloRole === 'bride';
       newPlayers = {
-        groom: moveX(newPlayers.groom, 'ArrowLeft', 'ArrowRight'),
-        bride: moveX(newPlayers.bride, 'KeyA',      'KeyD'),
+        ...newPlayers,
+        groom: groomControllable ? moveX(newPlayers.groom, 'ArrowLeft', 'ArrowRight') : newPlayers.groom,
+        bride: brideControllable ? moveX(newPlayers.bride, 'KeyA',      'KeyD')       : newPlayers.bride,
       };
 
       // ── bullets ──────────────────────────────────────────────────────
@@ -331,7 +367,7 @@ export function useGameState() {
       // ── item spawn ───────────────────────────────────────────────────
       spawnTimer++;
       if (spawnTimer >= ITEM_SPAWN_FRAMES && items.length < 8) {
-        const it = spawnItem(newPlayers.groom.row, newPlayers.bride.row, level, acquiredItems);
+        const it = spawnItem(newPlayers[topRole].row, newPlayers[bottomRole].row, level, acquiredItems);
         if (it) items = [...items, it];
         spawnTimer = 0;
       }
@@ -417,7 +453,7 @@ export function useGameState() {
 
       // ── win / lose check ─────────────────────────────────────────────
       const levelDone      = isLevelComplete(level, newAcquired);
-      const playersHaveMet = newPlayers.groom.row >= newPlayers.bride.row;
+      const playersHaveMet = newPlayers[topRole].row >= newPlayers[bottomRole].row;
 
       let phase = 'playing';
       if (lives <= 0) {
@@ -481,16 +517,18 @@ export function useGameState() {
   const handleAction = useCallback((action) => {
     switch (action.type) {
       case 'START':
-        setState(s => ({ ...s, phase: 'playing' })); break;
+        setState(s => ({ ...s, phase: 'modeSelect' })); break;
+      case 'CHOOSE_MODE':
+        setState({ ...getInitialState(0, action.mode, action.soloRole ?? null), phase: 'playing' }); break;
       case 'RESTART':
-        setState({ ...getInitialState(0), phase: 'playing' }); break;
+        setState(s => ({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' })); break;
       case 'NEXT_LEVEL': {
         const s = getState();
         // Guard: don't advance too early during meeting animation
         if (s.phase === 'meeting' && s.meetingTimer < 80) break;
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' });
         } else {
           setState({ ...s, phase: 'gameComplete' });
         }
@@ -498,6 +536,18 @@ export function useGameState() {
       }
       case 'SHOOT':
         shoot(action.role); break;
+      case 'CYCLE_AMMO':
+        cycleAmmoFor(action.role, action.dir ?? 1); break;
+      case 'SWIPE_MOVE': {
+        // Reuses the continuous key-held movement in update() via a
+        // synthetic, briefly-held key — a swipe becomes a short move burst.
+        const leftKey  = action.role === 'bride' ? 'KeyA' : 'ArrowLeft';
+        const rightKey = action.role === 'bride' ? 'KeyD' : 'ArrowRight';
+        const key = action.direction === 'left' ? leftKey : rightKey;
+        keysRef.current.add(key);
+        setTimeout(() => keysRef.current.delete(key), 220);
+        break;
+      }
       case 'SELECT_AMMO':
         setState(s => ({
           ...s,
@@ -505,7 +555,7 @@ export function useGameState() {
         })); break;
       default: break;
     }
-  }, [shoot]);
+  }, [shoot, cycleAmmoFor]);
 
   return { getState, startLoop, stopLoop, setRenderCallback, handleAction };
 }
