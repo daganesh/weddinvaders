@@ -20,6 +20,7 @@ body {
   align-items: center;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh; /* accounts for mobile browser chrome; falls back to 100vh above */
   padding: 16px;
 }
 
@@ -55,7 +56,9 @@ body {
 
 .canvas-wrapper {
   position: relative;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  width: 100%;
   max-width: 100%;
   line-height: 0; /* avoid extra space below the canvas from its inline baseline */
 }
@@ -66,6 +69,8 @@ body {
   border-radius: 8px;
   cursor: pointer;
   max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
   box-shadow: 0 0 40px rgba(255, 105, 180, 0.2), 0 0 80px rgba(65, 105, 225, 0.1);
   touch-action: none; /* let our own touch handlers own horizontal swipes */
@@ -211,5 +216,37 @@ body {
 
   .key-legend {
     display: none;
+  }
+}
+
+/* A phone held vertically is narrow and tall — the opposite aspect ratio of
+   this game's default board (see constants.js's IS_MOBILE_PORTRAIT, which
+   picks a taller/narrower logical resolution for exactly this case). Here we
+   let the canvas actually use that extra height instead of just centering a
+   short landscape-shaped box in a sea of empty space: the container is
+   pinned to the viewport height, and the canvas becomes a flexible middle
+   section — small toolbar above, small controls strip below — sized to fill
+   whatever's left. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .game-wrapper {
+    padding: 8px;
+    align-items: stretch;
+  }
+
+  .game-container {
+    /* .game-wrapper's 8px top+bottom padding sits outside this box, so its
+       full-viewport height needs to subtract that or the layout runs 16px
+       past the bottom of the screen. */
+    height: calc(100dvh - 16px);
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .canvas-wrapper {
+    flex: 1 1 0; /* 0 basis (not auto) so this item actually shrinks to the
+                    space left over by its siblings, instead of sizing from
+                    the canvas's own preferred (aspect-ratio-driven) height */
+    min-height: 0; /* let a flex child shrink below its content size */
+    overflow: hidden;
   }
 }

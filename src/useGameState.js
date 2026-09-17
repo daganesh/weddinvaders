@@ -5,7 +5,7 @@ import {
   GROOM_START_ROW, BRIDE_START_ROW, GROOM_START_X, BRIDE_START_X,
   ROW_HEIGHT,
   BULLET_SPEED, BULLET_WIDTH, BULLET_HEIGHT,
-  ITEM_WIDTH, ITEM_HEIGHT,
+  ITEM_WIDTH, ITEM_HEIGHT, MAX_CONCURRENT_ITEMS,
   AMMO_DAMAGE, AMMO_ORDER,
   ROW_ADVANCE_SPEEDUP, HOURGLASS_SLOW_SECONDS, NO_AMMO_FASTFORWARD,
 } from './constants';
@@ -366,7 +366,7 @@ export function useGameState() {
 
       // ── item spawn ───────────────────────────────────────────────────
       spawnTimer++;
-      if (spawnTimer >= ITEM_SPAWN_FRAMES && items.length < 8) {
+      if (spawnTimer >= ITEM_SPAWN_FRAMES && items.length < MAX_CONCURRENT_ITEMS) {
         const it = spawnItem(newPlayers[topRole].row, newPlayers[bottomRole].row, level, acquiredItems);
         if (it) items = [...items, it];
         spawnTimer = 0;

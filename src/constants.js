@@ -1,16 +1,39 @@
-export const GAME_WIDTH   = 800;
-export const PANEL_WIDTH  = 110;               // side checklist panel
-export const CANVAS_WIDTH = GAME_WIDTH + PANEL_WIDTH; // 910
-export const GAME_HEIGHT  = 600; // 540 play area + 60 HUD
+// A phone held vertically is narrow and tall — the opposite aspect ratio of
+// this game's default landscape-ish board. Rather than letterboxing a fixed
+// desktop-shaped board inside a tall screen (leaving most of the height
+// empty, as `max-width: 100%; height: auto` alone would), narrow/portrait
+// viewports get their own, taller-and-narrower logical board. Every other
+// module reads dimensions from these exported constants rather than hardcoding
+// numbers, so this is the only place the two profiles need to be chosen —
+// evaluated once at module load (no resize listener anywhere in this
+// codebase yet), so rotating the device mid-session keeps whichever profile
+// was picked at load.
+const IS_MOBILE_PORTRAIT =
+  typeof window !== 'undefined' &&
+  window.innerWidth <= 640 &&
+  window.innerHeight > window.innerWidth;
 
-export const TOTAL_ROWS   = 9;   // rows 0-8
-export const ROW_HEIGHT   = 60;  // each row is 60px tall
-export const PLAY_HEIGHT  = TOTAL_ROWS * ROW_HEIGHT; // 540
-export const HUD_HEIGHT   = GAME_HEIGHT - PLAY_HEIGHT; // 60
+export const GAME_WIDTH   = IS_MOBILE_PORTRAIT ? 460 : 800;
+export const PANEL_WIDTH  = IS_MOBILE_PORTRAIT ? 92  : 110; // side checklist panel
+export const CANVAS_WIDTH = GAME_WIDTH + PANEL_WIDTH; // 552 mobile / 910 desktop
+
+export const TOTAL_ROWS   = 9; // rows 0-8, same board depth on every device
+export const ROW_HEIGHT   = IS_MOBILE_PORTRAIT ? 80 : 60; // taller rows use more of a tall screen's height
+export const PLAY_HEIGHT  = TOTAL_ROWS * ROW_HEIGHT;
+export const HUD_HEIGHT   = 60;
+export const GAME_HEIGHT  = PLAY_HEIGHT + HUD_HEIGHT; // 780 mobile / 600 desktop
+
+// A narrower intrinsic canvas width means the same viewport width scales it
+// up more (CSS `max-width: 100%` divides by a smaller CANVAS_WIDTH), so
+// sprites/items/text drawn at the same logical pixel sizes below render
+// visibly larger on a phone — no per-shape scaling math needed for that part.
+// Concurrent flying items are capped lower on mobile so those now-larger
+// item cards don't visually crowd/overlap a narrower play field.
+export const MAX_CONCURRENT_ITEMS = IS_MOBILE_PORTRAIT ? 5 : 8;
 
 // Player sizes and starting rows
-export const PLAYER_WIDTH  = 62;
-export const PLAYER_HEIGHT = 50;
+export const PLAYER_WIDTH  = IS_MOBILE_PORTRAIT ? 96 : 62;
+export const PLAYER_HEIGHT = IS_MOBILE_PORTRAIT ? 78 : 50;
 export const PLAYER_SPEED  = 5;
 
 export const GROOM_START_ROW = 0;                 // top
@@ -26,8 +49,8 @@ export const BULLET_WIDTH  = 10;
 export const BULLET_HEIGHT = 6;
 
 // Flying items
-export const ITEM_WIDTH  = 68;
-export const ITEM_HEIGHT = 56; // fits in ROW_HEIGHT with 2px margin top+bottom
+export const ITEM_WIDTH  = IS_MOBILE_PORTRAIT ? 96 : 68;
+export const ITEM_HEIGHT = IS_MOBILE_PORTRAIT ? 74 : 56; // fits in ROW_HEIGHT with a small margin top+bottom
 export const ITEM_SPEED  = 1.5;
 
 // Ammo labels used in HUD / cycling

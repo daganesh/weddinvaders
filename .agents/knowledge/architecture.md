@@ -122,7 +122,12 @@ solo-only mobile control surface.
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
 - **`setState(updater)` pattern** — always pass a function so the closure reads the latest state.
 - **`renderer.js` is pure** — takes `(ctx, state, assets, config)`, returns nothing, has no side-effects. `config` defaults to `DEFAULT_CONFIG` when omitted (no `localStorage` access inside `renderer.js` itself).
-- **Canvas dimensions**: `CANVAS_WIDTH = 910` (800 play area + 110 panel), `GAME_HEIGHT = 600` (540 play + 60 HUD).
+- **Canvas dimensions are responsive, chosen once at load**: desktop is `CANVAS_WIDTH = 910` (800
+  play area + 110 panel), `GAME_HEIGHT = 600` (540 play + 60 HUD); a narrow/portrait viewport
+  (`constants.js`'s `IS_MOBILE_PORTRAIT`) instead gets `CANVAS_WIDTH = 552` (460 + 92),
+  `GAME_HEIGHT = 780` (720 + 60) — taller and narrower, so a phone held vertically fills far more of
+  its own screen instead of letterboxing the desktop-shaped board. See `constants.md` and
+  `game-jsx.md` (`Game.css`'s matching media query) for the full mobile-portrait layout story.
 - **No light theme, anywhere** — the game is dark-only by design (`Game.css` hardcodes a dark body
   background unconditionally). `index.css` no longer has a `@media (prefers-color-scheme: light)`
   override (removed — it was unused Vite-template boilerplate that flipped button backgrounds to
