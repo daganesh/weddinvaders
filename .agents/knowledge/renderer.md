@@ -32,8 +32,8 @@ render(ctx, state, assetsRef.current, configRef.current);
 | `drawBackground(ctx, players, cfg)` | 38 | Play-field background, per-row shading. Gradient stops read `cfg.colors.bgTop/bgMid/bgBot`. |
 | `drawPlayer(ctx, player, img, isGroom, cfg)` | 88 | Draws bride/groom sprite images at their current position via `drawImageContain` (preserves the image's own aspect ratio, letterboxed within the `PLAYER_WIDTH × PLAYER_HEIGHT` box, instead of stretching/skewing it — matters since a customization upload can be any aspect ratio); falls back to `cfg.colors.brideColor`/`groomColor` + emoji when the image isn't loaded/overridden. |
 | `drawBullet(ctx, b)` | 102 | Draws one projectile, colored by `ammoType`. |
-| `drawItem(ctx, item)` | 129 | Draws one flying wedding item: emoji, remaining price, flash feedback on hit. Border is a low-alpha rgba (`rgba(255,215,0,0.35)` essential / `rgba(255,255,255,0.10)` non-essential) — intentionally faint, not solid. Special-text branch includes `incomeType === 'time'` for the hourglass ("⏳ SLOW TIME"), alongside `income`/`mine`/`discount`. |
-| `drawPanel(ctx, state, cfg)` | 203 | Right-side 110px checklist panel (required items + checkmarks). Level name and `parent_bride`/`parent_groom` item labels are resolved through `cfg` via `getLevelText`/`getItemLabel`. |
+| `drawItem(ctx, item, itemImg)` | 129 | Draws one flying wedding item: icon, remaining price, flash feedback on hit. `itemImg` is `assets.items[item.templateId]` — a preloaded `Image` when the active package overrides that item's icon; drawn via `drawImageContain` when loaded (`itemImg.complete && itemImg.naturalWidth`), else falls back to the item's emoji (today's default). Border is a low-alpha rgba (`rgba(255,215,0,0.35)` essential / `rgba(255,255,255,0.10)` non-essential) — intentionally faint, not solid. Special-text branch includes `incomeType === 'time'` for the hourglass ("⏳ SLOW TIME"), alongside `income`/`mine`/`discount`. |
+| `drawPanel(ctx, state, cfg, itemImages)` | 203 | Right-side 110px checklist panel (required items + checkmarks). `itemImages` is `assets.items` (keyed by `WEDDING_ITEMS` id, not `templateId` — these cards read the template directly, not a spawned instance), used the same emoji-or-image way as `drawItem`. Level name and `parent_bride`/`parent_groom` item labels are resolved through `cfg` via `getLevelText`/`getItemLabel`. |
 | `drawHUD(ctx, state)` | 366 | Top HUD: money, ammo counts, lives, timer. Update this when adding a new ammo type. Not customization-aware (out of scope — HUD/ammo labels aren't in the customizable text set). |
 | `drawMessages(ctx, messages)` | 411 | Floating "+$150" / "TRAP!" / "⏳ +15s reprieve!" popup text. Renders `m.text`, which is baked in at spawn time in `useGameState.js` from `WEDDING_ITEMS`' raw label — **not** customization-aware; see `use-game-state.md`. |
 | `drawAdvanceAnim(ctx, anim)` | 429 | Row-advance flash animation. |
@@ -63,7 +63,8 @@ compute their own height from the image's aspect ratio inline.
   touches `localStorage` directly; that stays behind `customizationStore.js`.
 - Consumes state produced by `useGameState.js` — see [`use-game-state.md`](use-game-state.md). Never mutates it.
 - Called by `Game.jsx` — see [`game-jsx.md`](game-jsx.md).
-- Does **not** import `src/pixelArt.js` — despite `pixelArt.js` defining `drawPixelSprite()`,
-  actual sprites are drawn via `assets` (preloaded PNGs from `useAssets.js`), not pixel art. See
-  the note in [`architecture.md`](architecture.md).
+- Does **not** import `src/pixelArt.js` — despite `pixelArt.js` defining `drawPixelSprite()`
+  (an 8×8 grid, unrelated to and unused by the 16×16 SVGs in `assets/icons/`), item icons are
+  drawn via `assets.items` (preloaded images from `useAssets.js`, sourced from the active
+  package's `images`), falling back to emoji — see `architecture.md`'s Packages section.
 - Exercised by the manual checklist in [`testing.md`](testing.md) (visual regressions after any change here should be checked against that checklist).

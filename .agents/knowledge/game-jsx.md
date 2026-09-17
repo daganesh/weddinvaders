@@ -17,7 +17,7 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 ## Key Surface
 | Element | Line | Purpose |
 |---|---|---|
-| `useAssets()` call | 10 | Preloads bride/groom/couple images into `assetsRef`, preferring a customization override per role (see `useAssets.js` / `customizationStore.js`). |
+| `useAssets()` call | 10 | Preloads bride/groom/couple images plus any per-item icon override into `assetsRef` (`{ bride, groom, couple, items: { [itemId]: Image }, loaded }`), preferring the active package's `images` per role/item id (see `useAssets.js` / `customizationStore.js`). |
 | `useCustomization()` call | 12 | Ref-based hook reading the customization config once at mount into `configRef` — see `architecture.md`. |
 | `useGameState()` call | 13 | Destructures `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }` — see [`use-game-state.md`](use-game-state.md). |
 | render-callback effect | 15–24 | Registers a callback that calls `render(ctx, state, assets, config)` (see [`renderer.md`](renderer.md)) every frame, and starts/stops the `requestAnimationFrame` loop on mount/unmount. |
