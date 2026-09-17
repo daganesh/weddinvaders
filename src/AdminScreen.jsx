@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  DEFAULT_PACKAGE_ID,
   DEFAULT_CONFIG,
   listPackages,
   getActivePackageId,
@@ -32,15 +31,16 @@ export default function AdminScreen({ onExit }) {
   const [activeId, setActiveId] = useState(() => getActivePackageId());
   const [selectedId, setSelectedId] = useState(() => getActivePackageId());
   const [draft, setDraft] = useState(() => getPackage(getActivePackageId()));
-  const [nameInput, setNameInput] = useState('');
-  const [seedId, setSeedId] = useState(DEFAULT_PACKAGE_ID);
   const [renameInput, setRenameInput] = useState(draft.name);
   const [status, setStatus] = useState('');
 
+  const [showNewPackageModal, setShowNewPackageModal] = useState(false);
+  const [newPackageName, setNewPackageName] = useState('');
+  const [newPackageCopyFrom, setNewPackageCopyFrom] = useState(selectedId);
+
   // System packages (Default, 80s Arcade, …) are code-defined and read-only —
   // shipped on every deploy, never persisted, can't be edited/renamed/deleted.
-  const isSystem = draft.isDefault;
-  const systemPackages = packages.filter(p => p.isDefault);
+  const isDefault = draft.isDefault;
 
   function flashStatus(message) {
     setStatus(message);
@@ -59,10 +59,16 @@ export default function AdminScreen({ onExit }) {
     setRenameInput(pkg.name);
   }
 
+  function openNewPackageModal() {
+    setNewPackageName('');
+    setNewPackageCopyFrom(selectedId);
+    setShowNewPackageModal(true);
+  }
+
   function handleCreatePackage() {
     try {
-      const pkg = createPackage(nameInput, seedId);
-      setNameInput('');
+      const pkg = createPackage(newPackageName, newPackageCopyFrom);
+      setShowNewPackageModal(false);
       refreshPackages();
       selectPackage(pkg.id);
       flashStatus(`Created "${pkg.name}".`);
@@ -120,6 +126,10 @@ export default function AdminScreen({ onExit }) {
     setDraft(c => ({ ...c, text: { ...c.text, [key]: value } }));
   }
 
+  function setNameField(role, value) {
+    setDraft(c => ({ ...c, text: { ...c.text, names: { ...c.text.names, [role]: value } } }));
+  }
+
   function setFamilyLabel(role, value) {
     setDraft(c => ({ ...c, text: { ...c.text, familyLabels: { ...c.text.familyLabels, [role]: value } } }));
   }
@@ -145,60 +155,89 @@ export default function AdminScreen({ onExit }) {
       <h1>Wedding Customization</h1>
 
       <section className="admin-package-bar">
-        <h2>Packages</h2>
+        <div className="admin-section-header">
+          <h2>Packages</h2>
+          <button className="admin-icon-btn" title="New package" onClick={openNewPackageModal}>+</button>
+        </div>
         <div className="admin-package-list">
           {packages.map(pkg => (
             <button
               key={pkg.id}
-              className={`admin-package-chip${pkg.id === selectedId ? ' is-selected' : ''}${pkg.id === activeId ? ' is-active' : ''}`}
+              className={`admin-package-chip${pkg.id === selectedId ? ' is-selected' : ''}`}
               onClick={() => selectPackage(pkg.id)}
             >
               {pkg.name}
               {pkg.isDefault && <span className="admin-system-tag">system</span>}
-              {pkg.id === activeId && <span className="admin-active-tag">active</span>}
+              {pkg.id === activeId && <span className="admin-active-dot" title="Active package" />}
             </button>
           ))}
         </div>
-        <div className="admin-package-new">
-          <input
-            value={nameInput}
-            onChange={e => setNameInput(e.target.value)}
-            placeholder="New package name"
-            onKeyDown={e => { if (e.key === 'Enter') handleCreatePackage(); }}
-          />
-          <select value={seedId} onChange={e => setSeedId(e.target.value)} title="Start from">
-            {systemPackages.map(p => (
-              <option key={p.id} value={p.id}>Start from {p.name}</option>
-            ))}
-          </select>
-          <button onClick={handleCreatePackage}>+ New package</button>
-        </div>
       </section>
+
+      {showNewPackageModal && (
+        <div className="admin-modal-overlay" onClick={() => setShowNewPackageModal(false)}>
+          <div className="admin-modal" onClick={e => e.stopPropagation()}>
+            <h3>New package</h3>
+            <label className="admin-text-row">
+              Name
+              <input
+                value={newPackageName}
+                onChange={e => setNewPackageName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreatePackage(); }}
+                autoFocus
+              />
+            </label>
+            <label className="admin-text-row">
+              Copy from
+              <select value={newPackageCopyFrom} onChange={e => setNewPackageCopyFrom(e.target.value)}>
+                {packages.map(pkg => (
+                  <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+                ))}
+              </select>
+            </label>
+            <div className="admin-modal-actions">
+              <button onClick={() => setShowNewPackageModal(false)}>Cancel</button>
+              <button className="admin-save" onClick={handleCreatePackage}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="admin-package-detail">
-        {isSystem ? (
-          <>
-            <h2>{draft.name}</h2>
-            <p className="admin-hint">
-              "{draft.name}" is a system package and is read-only. Create a new package (seeded from
-              it, via the dropdown above) to customize it.
-            </p>
-          </>
-        ) : (
-          <div className="admin-package-name-row">
-            <input value={renameInput} onChange={e => setRenameInput(e.target.value)} />
-            <button onClick={handleRename} disabled={renameInput.trim() === draft.name}>Rename</button>
-            <button onClick={handleDelete} className="admin-delete">Delete package</button>
-          </div>
-        )}
-        {selectedId === activeId ? (
-          <span className="admin-active-tag admin-active-tag-standalone">active</span>
-        ) : (
-          <button onClick={() => handleSetActive(selectedId)}>Set as active package</button>
+        <div className="admin-package-name-row">
+          {isDefault ? (
+            <h2 className="admin-package-title">{draft.name}</h2>
+          ) : (
+            <>
+              <input value={renameInput} onChange={e => setRenameInput(e.target.value)} />
+              <button
+                className="admin-icon-btn"
+                title="Rename package"
+                onClick={handleRename}
+                disabled={!renameInput.trim() || renameInput.trim() === draft.name}
+              >
+                ✏️
+              </button>
+              <button className="admin-icon-btn admin-icon-btn-danger" title="Delete package" onClick={handleDelete}>
+                🗑️
+              </button>
+            </>
+          )}
+          {selectedId === activeId ? (
+            <span className="admin-active-badge"><span className="admin-active-dot" /> active</span>
+          ) : (
+            <button onClick={() => handleSetActive(selectedId)}>Set as active package</button>
+          )}
+        </div>
+        {isDefault && (
+          <p className="admin-hint">
+            "{draft.name}" is a system package and is read-only. Use the + button above to create a
+            new package from these values.
+          </p>
         )}
       </section>
 
-      <fieldset disabled={isSystem} className="admin-fieldset">
+      <fieldset disabled={isDefault} className="admin-fieldset">
         <section>
           <h2>Portraits</h2>
           {PORTRAIT_ROLES.map(({ role, label }) => (
@@ -247,6 +286,14 @@ export default function AdminScreen({ onExit }) {
         <section>
           <h2>Text</h2>
           <label className="admin-text-row">
+            Bride name
+            <input value={draft.text.names.bride} onChange={e => setNameField('bride', e.target.value)} />
+          </label>
+          <label className="admin-text-row">
+            Groom name
+            <input value={draft.text.names.groom} onChange={e => setNameField('groom', e.target.value)} />
+          </label>
+          <label className="admin-text-row">
             Title
             <input value={draft.text.title} onChange={e => setTextField('title', e.target.value)} />
           </label>
@@ -291,7 +338,7 @@ export default function AdminScreen({ onExit }) {
       </fieldset>
 
       <div className="admin-actions">
-        {!isSystem && (
+        {!isDefault && (
           <>
             <button className="admin-save" onClick={handleSave}>Save</button>
             <button onClick={handleResetDraftToDefault}>Reset fields to default values</button>

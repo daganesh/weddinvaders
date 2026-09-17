@@ -74,23 +74,32 @@ freshly derived from their source config: `default` (id `DEFAULT_PACKAGE_ID`, fr
 `EIGHTIES_CONFIG` — every item's emoji replaced by one of the pixel-art SVGs in `assets/icons/`,
 plus a matching dark/neon retro color palette; portraits are left unset, same bundled photos as
 `default`). Both are **read-only** — `isDefault: true` on the package object — can't be edited,
-renamed, or deleted, only selected as active or used as a seed for a new custom package
-(`createPackage(name, seedFromId)` defaults `seedFromId` to `DEFAULT_PACKAGE_ID` but accepts either
-system package or any existing custom package's id). Exactly one package is the **active** one at a
-time (`activePackageId`, persisted); that's the only one `getActiveConfig()` resolves and the only
-one the running game ever renders. Editing a package via `AdminScreen.jsx` does **not** implicitly
-activate it — "Save" and "Set active" are deliberately separate actions, so an admin can author a
-package without disturbing whatever is currently live. Full API: `listPackages()`, `getPackage(id)`,
-`getActivePackageId()`, `setActivePackage(id)`, `createPackage(name, seedFromId?)`,
-`updatePackage(id, content)`, `renamePackage(id, name)`, `deletePackage(id)` (all in
-`customizationStore.js`, all throwing on a system-package id misuse or a duplicate —
-case-insensitive — package name). Deleting the active package falls back to `default`.
+renamed, or deleted, only selected as active or used as a "copy from" source for a new package.
+Exactly one package is the **active** one at a time (`activePackageId`, persisted); that's the only
+one `getActiveConfig()` resolves and the only one the running game ever renders. Editing a package
+via `AdminScreen.jsx` does **not** implicitly activate it — "Save" and "Set active" are deliberately
+separate actions, so an admin can author a package without disturbing whatever is currently live.
+Full API: `listPackages()`, `getPackage(id)`, `getActivePackageId()`, `setActivePackage(id)`,
+`createPackage(name, copyFromId = DEFAULT_PACKAGE_ID)`, `updatePackage(id, content)`,
+`renamePackage(id, name)`, `deletePackage(id)` (all in `customizationStore.js`, all throwing on a
+system-package id misuse or a duplicate — case-insensitive — package name). `AdminScreen.jsx`'s "+"
+button next to the Packages heading opens a small modal (name + a "copy from" dropdown of every
+existing package, system or custom) rather than always copying `default`; package chips show a
+"system" tag for `default`/`80s`. Deleting the active package falls back to `default`.
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
 - **`setState(updater)` pattern** — always pass a function so the closure reads the latest state.
 - **`renderer.js` is pure** — takes `(ctx, state, assets, config)`, returns nothing, has no side-effects. `config` defaults to `DEFAULT_CONFIG` when omitted (no `localStorage` access inside `renderer.js` itself).
 - **Canvas dimensions**: `CANVAS_WIDTH = 910` (800 play area + 110 panel), `GAME_HEIGHT = 600` (540 play + 60 HUD).
+- **No light theme, anywhere** — the game is dark-only by design (`Game.css` hardcodes a dark body
+  background unconditionally). `index.css` no longer has a `@media (prefers-color-scheme: light)`
+  override (removed — it was unused Vite-template boilerplate that flipped button backgrounds to
+  near-white without ever setting a matching text color, producing unreadable white-on-white
+  buttons whenever the browser/OS preferred light mode). Any plain `<button>` added anywhere in the
+  app should still set its own explicit `background`/`color` rather than relying on `index.css`'s
+  base button style, since `AdminScreen.css` does exactly that as a defensive rule
+  (`.admin-screen button`).
 
 ## Entry Point
 `src/main.jsx` → `<App />` → `<Game />` — the canvas is the only meaningful DOM node.
