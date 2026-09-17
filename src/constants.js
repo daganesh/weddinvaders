@@ -72,3 +72,4 @@ export const GAME_DURATION         = 90;  // seconds
 export const ROW_ADVANCE_INTERVAL  = 18;  // seconds between each row advance
 export const ROW_ADVANCE_SPEEDUP   = 2.5; // multiplier once all required items are acquired
 export const HOURGLASS_SLOW_SECONDS = 15; // real seconds the hourglass item slows row-advance for
+export const NO_AMMO_FASTFORWARD    = 10; // speed multiplier once cash/invite/heart are all exhausted

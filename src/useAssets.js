@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import brideImgSrc  from './assets/bride-nobg.png';
 import groomImgSrc  from './assets/groom-nobg.png';
 import coupleImgSrc from './assets/couple-nobg.png';
-import { getConfig } from './customizationStore';
+import { getActiveConfig } from './customizationStore';
 
 /**
  * Preloads the three character PNGs.
@@ -25,7 +25,7 @@ export function useAssets() {
       }
     };
 
-    const { images } = getConfig();
+    const { images } = getActiveConfig();
 
     const bride  = new Image(); bride.onload  = onLoad; bride.src  = images.bride  || brideImgSrc;
     const groom  = new Image(); groom.onload  = onLoad; groom.src  = images.groom  || groomImgSrc;
