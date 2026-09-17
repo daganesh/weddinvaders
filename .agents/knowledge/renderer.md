@@ -11,10 +11,10 @@ the state produced by `useGameState.js` every frame and paints it; it never chan
 
 `config` (from `customizationStore.js`) supplies the customizable palette (`config.colors.*`) and
 wedding text (`config.text.*` — title, tagline, win/lose messages, level names/subtitles, family
-labels) that used to be hardcoded literals. It defaults to `DEFAULT_CONFIG` when the 4th argument
-is omitted, so `render(ctx, state, assets)` still renders today's exact defaults. Two small helpers,
-`getLevelText(cfg, index)` and `getItemLabel(item, cfg)`, resolve level text and the
-`parent_bride`/`parent_groom` family labels through the config (falling back to `WEDDING_ITEMS`'
+labels, bride/groom names) that used to be hardcoded literals. It defaults to `DEFAULT_CONFIG` when
+the 4th argument is omitted, so `render(ctx, state, assets)` still renders today's exact defaults.
+Two small helpers, `getLevelText(cfg, index)` and `getItemLabel(item, cfg)`, resolve level text and
+the `parent_bride`/`parent_groom` family labels through the config (falling back to `WEDDING_ITEMS`'
 own `label` for every other item) — every draw function that used to read a hardcoded color or
 string now takes `cfg` as its trailing argument instead.
 
@@ -38,7 +38,7 @@ render(ctx, state, assetsRef.current, configRef.current);
 | `drawMessages(ctx, messages)` | 411 | Floating "+$150" / "TRAP!" / "⏳ +15s reprieve!" popup text. Renders `m.text`, which is baked in at spawn time in `useGameState.js` from `WEDDING_ITEMS`' raw label — **not** customization-aware; see `use-game-state.md`. |
 | `drawAdvanceAnim(ctx, anim)` | 429 | Row-advance flash animation. |
 | `drawMeeting(ctx, state, assets, cfg)` | 448 | `meeting` phase: couple image + level result. Uses `cfg.text.winMessage` on the last level, `getLevelText(cfg, ...)` for the next level's name/subtitle otherwise. |
-| `drawTitle(ctx, cfg)` | 572 | `title` phase screen (controls + ammo legend). Title/tagline/accent color come from `cfg.text`/`cfg.colors`; the control-legend lines below them are intentionally left hardcoded (out of customization scope). |
+| `drawTitle(ctx, cfg)` | 572 | `title` phase screen (controls + ammo legend). Title/tagline/accent color come from `cfg.text`/`cfg.colors`; the two control-legend lines interpolate `cfg.text.names.bride`/`.groom` in place of the literal words "Bride"/"Groom" (everything else in those lines — key bindings, the rest of the legend — is intentionally left hardcoded, out of customization scope). |
 | `drawOverlay(ctx, state, assets, cfg)` | 621 | `levelComplete` / `gameComplete` / `lost` overlays. Uses `cfg.text.winMessage`/`loseMessage`, `getLevelText`, and `getItemLabel` (for the "Still needed:" missing-item list). |
 
 Note: like the pre-existing `discount` item, `hourglass` has `price > 0`, so `drawItem()`'s

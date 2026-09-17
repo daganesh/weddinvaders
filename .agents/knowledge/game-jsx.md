@@ -25,14 +25,14 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 | `handleCanvasClick` | 24–31 | Maps a canvas click to the right `handleAction` for the current phase (`START`, `NEXT_LEVEL`, `RESTART`). |
 | `<canvas>` element | 39–45 | Sized `CANVAS_WIDTH × GAME_HEIGHT` from `src/constants.js`; the only meaningful DOM node for gameplay. |
 | `.mobile-controls` block | 48–92 | On-screen ammo-select and shoot buttons for touch devices, dispatching `SELECT_AMMO` / `SHOOT` actions per role. |
-| `.key-legend` | 94–97 | On-screen text listing keyboard controls — kept in sync with the real bindings in `useGameState.js` (bride: A/D move · S ammo · W shoot; groom: ←/→ move · ↑/↓ ammo · Space shoot). |
+| `.key-legend` | 94–97 | On-screen text listing keyboard controls — kept in sync with the real bindings in `useGameState.js` (bride: A/D move · S ammo · W shoot; groom: ←/→ move · ↑/↓ ammo · Space shoot). The displayed name (default "Bride"/"Groom") comes from `activeConfig.text.names`, same source and same non-ref read pattern as the shoot-button colors below. |
 
 ## Relationships / Cross-links
 - Constructs and is the sole caller of `useGameState()` — see [`use-game-state.md`](use-game-state.md).
 - Constructs `useAssets()` (`src/useAssets.js`, not a dedicated component file — small/single-purpose).
 - Constructs `useCustomization()` (`src/useCustomization.js`) and reads `customizationStore.js`'s
-  `getConfig()` directly for the DOM shoot-button colors (not via the ref, since refs shouldn't be
-  read during render) — see `architecture.md`.
+  `getActiveConfig()` directly for the DOM shoot-button colors and the `.key-legend` names (not via
+  the ref, since refs shouldn't be read during render) — see `architecture.md`.
 - Calls `render()` from `src/renderer.js` — see [`renderer.md`](renderer.md).
 - Rendered by `App.jsx` alongside `AdminScreen.jsx` behind a `#/admin` hash-route check (`App.jsx`
   is no longer a pure passthrough) — see `architecture.md`.

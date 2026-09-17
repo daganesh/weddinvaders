@@ -71,16 +71,26 @@ persisted); that's the only one `getActiveConfig()` resolves and the only one th
 ever renders. Editing a package via `AdminScreen.jsx` does **not** implicitly activate it — "Save"
 and "Set active" are deliberately separate actions, so an admin can author a package without
 disturbing whatever is currently live. Full API: `listPackages()`, `getPackage(id)`,
-`getActivePackageId()`, `setActivePackage(id)`, `createPackage(name)`, `updatePackage(id, content)`,
-`renamePackage(id, name)`, `deletePackage(id)` (all in `customizationStore.js`, all throwing on
-`DEFAULT_PACKAGE_ID` misuse or a duplicate — case-insensitive — package name). Deleting the active
-package falls back to `default`.
+`getActivePackageId()`, `setActivePackage(id)`, `createPackage(name, copyFromId = DEFAULT_PACKAGE_ID)`,
+`updatePackage(id, content)`, `renamePackage(id, name)`, `deletePackage(id)` (all in
+`customizationStore.js`, all throwing on `DEFAULT_PACKAGE_ID` misuse or a duplicate —
+case-insensitive — package name). `AdminScreen.jsx`'s "+" button next to the Packages heading opens
+a small modal (name + a "copy from" dropdown of every existing package) rather than always copying
+`default`. Deleting the active package falls back to `default`.
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
 - **`setState(updater)` pattern** — always pass a function so the closure reads the latest state.
 - **`renderer.js` is pure** — takes `(ctx, state, assets, config)`, returns nothing, has no side-effects. `config` defaults to `DEFAULT_CONFIG` when omitted (no `localStorage` access inside `renderer.js` itself).
 - **Canvas dimensions**: `CANVAS_WIDTH = 910` (800 play area + 110 panel), `GAME_HEIGHT = 600` (540 play + 60 HUD).
+- **No light theme, anywhere** — the game is dark-only by design (`Game.css` hardcodes a dark body
+  background unconditionally). `index.css` no longer has a `@media (prefers-color-scheme: light)`
+  override (removed — it was unused Vite-template boilerplate that flipped button backgrounds to
+  near-white without ever setting a matching text color, producing unreadable white-on-white
+  buttons whenever the browser/OS preferred light mode). Any plain `<button>` added anywhere in the
+  app should still set its own explicit `background`/`color` rather than relying on `index.css`'s
+  base button style, since `AdminScreen.css` does exactly that as a defensive rule
+  (`.admin-screen button`).
 
 ## Entry Point
 `src/main.jsx` → `<App />` → `<Game />` — the canvas is the only meaningful DOM node.
