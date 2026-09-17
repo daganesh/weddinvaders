@@ -96,6 +96,7 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
   if (!player.alive) return;
   const { x, y } = player;
   const w = PLAYER_WIDTH, h = PLAYER_HEIGHT;
+  const s = PLAYER_WIDTH / 62; // rescales fallback/label sizes with a larger mobile sprite
 
   ctx.save();
   if (waiting && frame % 200 < 10) ctx.globalAlpha = 0.35;
@@ -105,7 +106,7 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
     // Fallback coloured box + emoji
     ctx.fillStyle = isGroom ? cfg.colors.groomColor : cfg.colors.brideColor;
     ctx.fillRect(x, y, w, h);
-    ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${30 * s}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(isGroom ? '🤵' : '👰', x + w / 2, y + h / 2);
     ctx.textBaseline = 'alphabetic';
   }
@@ -115,10 +116,10 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
 
   // Ammo label: below sprite for the top slot, above sprite for the bottom slot
   const ammoMeta = AMMO_META[player.selectedAmmo];
-  ctx.font      = '13px monospace';
+  ctx.font      = `${13 * s}px monospace`;
   ctx.textAlign = 'center';
   ctx.fillStyle = ammoMeta.color;
-  ctx.fillText(ammoMeta.label, x + w / 2, isTop ? y + h + 14 : y - 4);
+  ctx.fillText(ammoMeta.label, x + w / 2, isTop ? y + h + 14 * s : y - 4 * s);
 }
 
 // ── bullets ──────────────────────────────────────────────────────────────────
@@ -150,9 +151,14 @@ function drawBullet(ctx, b) {
 //    y+43 … y+53  HP bar (purchasable items)
 //
 
+// Font/icon sizes below were tuned for the desktop ITEM_WIDTH (68px) — `s`
+// rescales all of them together so a larger mobile ITEM_WIDTH (constants.js)
+// gets proportionally larger icons/text instead of the same small text
+// floating in a bigger card.
 function drawItem(ctx, item, itemImg) {
   const { x, y, templateId, label, emoji, price, maxPrice, essential, flashTimer,
           incomeType, incomeAmount } = item;
+  const s = ITEM_WIDTH / 68;
 
   const flashing = flashTimer > 0 && Math.floor(flashTimer / 2) % 2 === 0;
   ctx.globalAlpha = flashing ? 0.35 : 1;
@@ -160,32 +166,33 @@ function drawItem(ctx, item, itemImg) {
   // Card background + border
   const bg     = essential ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.08)';
   const border = essential ? 'rgba(255,215,0,0.35)' : 'rgba(255,255,255,0.10)';
-  roundRect(ctx, x, y, ITEM_WIDTH, ITEM_HEIGHT, 8);
+  roundRect(ctx, x, y, ITEM_WIDTH, ITEM_HEIGHT, 8 * s);
   ctx.fillStyle   = bg;     ctx.fill();
   ctx.strokeStyle = border; ctx.lineWidth = essential ? 2 : 1; ctx.stroke();
 
   // Icon — a package-supplied image when set, else the item's emoji.
   // Both are centred in the upper portion of the card.
+  const iconSize = 26 * s;
   if (itemImg?.complete && itemImg.naturalWidth) {
-    drawImageContain(ctx, itemImg, x + ITEM_WIDTH / 2 - 13, y + 3, 26, 26);
+    drawImageContain(ctx, itemImg, x + ITEM_WIDTH / 2 - iconSize / 2, y + 3 * s, iconSize, iconSize);
   } else {
-    ctx.font         = '26px Arial';
+    ctx.font         = `${iconSize}px Arial`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle    = '#fff';
-    ctx.fillText(emoji ?? '❓', x + ITEM_WIDTH / 2, y + 16);
+    ctx.fillText(emoji ?? '❓', x + ITEM_WIDTH / 2, y + 16 * s);
     ctx.textBaseline = 'alphabetic';
   }
 
   // Short item name label
-  ctx.font      = 'bold 7px monospace';
+  ctx.font      = `bold ${7 * s}px monospace`;
   ctx.fillStyle = 'rgba(255,255,255,0.80)';
   ctx.textAlign = 'center';
-  ctx.fillText(label ?? templateId, x + ITEM_WIDTH / 2, y + 33);
+  ctx.fillText(label ?? templateId, x + ITEM_WIDTH / 2, y + 33 * s);
 
   // Bottom info — price bar, income amount, or special text
-  const barX = x + 4, barY = y + ITEM_HEIGHT - 12;
-  const barW = ITEM_WIDTH - 8, barH = 7;
+  const barX = x + 4 * s, barY = y + ITEM_HEIGHT - 12 * s;
+  const barW = ITEM_WIDTH - 8 * s, barH = 7 * s;
 
   if (maxPrice > 0) {
     // HP bar
@@ -194,34 +201,34 @@ function drawItem(ctx, item, itemImg) {
     ctx.fillRect(barX, barY, barW, barH);
     ctx.fillStyle = pct > 0.5 ? '#4caf50' : pct > 0.2 ? '#ff9800' : '#f44336';
     ctx.fillRect(barX, barY, barW * pct, barH);
-    ctx.font = 'bold 9px monospace'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-    ctx.fillText(`$${Math.ceil(price)}`, x + ITEM_WIDTH / 2, barY - 2);
+    ctx.font = `bold ${9 * s}px monospace`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText(`$${Math.ceil(price)}`, x + ITEM_WIDTH / 2, barY - 2 * s);
 
   } else if (incomeType === 'income') {
-    ctx.font = 'bold 10px monospace'; ctx.fillStyle = '#4caf50'; ctx.textAlign = 'center';
-    ctx.fillText(`+$${incomeAmount}`, x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3);
+    ctx.font = `bold ${10 * s}px monospace`; ctx.fillStyle = '#4caf50'; ctx.textAlign = 'center';
+    ctx.fillText(`+$${incomeAmount}`, x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3 * s);
     // Ammo-hint badge (top-right corner)
     const ammoHint = (templateId === 'parent_bride' || templateId === 'parent_groom') ? '💕' : '💌';
-    ctx.font = '10px Arial';
-    ctx.fillText(ammoHint, x + ITEM_WIDTH - 9, y + 11);
+    ctx.font = `${10 * s}px Arial`;
+    ctx.fillText(ammoHint, x + ITEM_WIDTH - 9 * s, y + 11 * s);
 
   } else if (incomeType === 'mine') {
-    ctx.font = 'bold 10px monospace'; ctx.fillStyle = '#f44336'; ctx.textAlign = 'center';
-    ctx.fillText('⚡ DANGER', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3);
+    ctx.font = `bold ${10 * s}px monospace`; ctx.fillStyle = '#f44336'; ctx.textAlign = 'center';
+    ctx.fillText('⚡ DANGER', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3 * s);
 
   } else if (incomeType === 'discount') {
-    ctx.font = 'bold 9px monospace'; ctx.fillStyle = '#ff9800'; ctx.textAlign = 'center';
-    ctx.fillText('−30% OFF', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3);
+    ctx.font = `bold ${9 * s}px monospace`; ctx.fillStyle = '#ff9800'; ctx.textAlign = 'center';
+    ctx.fillText('−30% OFF', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3 * s);
 
   } else if (incomeType === 'time') {
-    ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#64b5f6'; ctx.textAlign = 'center';
-    ctx.fillText('⏳ SLOW TIME', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3);
+    ctx.font = `bold ${8 * s}px monospace`; ctx.fillStyle = '#64b5f6'; ctx.textAlign = 'center';
+    ctx.fillText('⏳ SLOW TIME', x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3 * s);
   }
 
   // Required-item star (top-left)
   if (essential) {
-    ctx.font = '10px Arial'; ctx.textAlign = 'left';
-    ctx.fillText('⭐', x + 2, y + 11);
+    ctx.font = `${10 * s}px Arial`; ctx.textAlign = 'left';
+    ctx.fillText('⭐', x + 2 * s, y + 11 * s);
   }
 
   ctx.globalAlpha = 1;
