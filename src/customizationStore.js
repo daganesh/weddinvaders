@@ -89,7 +89,14 @@ function writeStore(store) {
     if (id === DEFAULT_PACKAGE_ID) continue; // derived from code, never persisted
     packages[id] = pkg;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, activePackageId: store.activePackageId, packages }));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, activePackageId: store.activePackageId, packages }));
+  } catch (err) {
+    if (err instanceof DOMException && (err.name === 'QuotaExceededError' || err.code === 22)) {
+      throw new Error('Not enough browser storage to save this — try smaller images or removing unused packages.');
+    }
+    throw err;
+  }
 }
 
 function isNameTaken(store, name, excludeId) {

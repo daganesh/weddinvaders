@@ -58,9 +58,15 @@ Both `useGameState.js` and `renderer.js` read shared data/config from
 and a fixed set of wedding-text fields, backed by localStorage today behind an interface designed
 to be swapped for a real API/DB later without touching call sites. `AdminScreen.jsx` is the only
 writer. Before an uploaded file reaches that config, `AdminScreen.jsx` runs it through
-`imageProcessing.js`'s `fileToProcessedPngDataUrl()`, which re-encodes it as PNG and fades
-near-white pixels to transparent (a simple threshold chroma-key, not true background removal —
-can also fade genuinely white parts of the subject).
+`imageProcessing.js`'s `fileToProcessedPngDataUrl()`, which downscales it (longest edge capped at
+`MAX_DIMENSION = 480`px — plenty for the largest in-game use, the ~320px-wide couple portrait; a
+raw phone photo can be 3000px+ and several MB once re-encoded losslessly as PNG otherwise), then
+re-encodes it as PNG and fades near-white pixels to transparent (a simple threshold chroma-key, not
+true background removal — can also fade genuinely white parts of the subject). `writeStore()`
+catches a `QuotaExceededError` from `localStorage.setItem` and rethrows a clear, user-facing message
+instead — copying a package with real (pre-downscale-fix) large images into another package could
+roughly double storage usage and exceed the browser's quota with no visible feedback (see
+`AdminScreen.jsx`'s modal error handling below).
 
 ### Packages
 
@@ -80,6 +86,13 @@ disturbing whatever is currently live. Full API: `listPackages()`, `getPackage(i
 case-insensitive — package name). `AdminScreen.jsx`'s "+" button next to the Packages heading opens
 a small modal (name + a "copy from" dropdown of every existing package) rather than always copying
 `default`. Deleting the active package falls back to `default`.
+
+**Modal error visibility gotcha**: `.admin-modal-overlay` has `z-index: 30`, which sits above the
+page's bottom `.admin-actions` bar — so an error raised by an action taken *inside* an open modal
+(e.g. `createPackage()` throwing) must never be shown via the page-level `flashStatus()`/`status`
+state, since that renders into `.admin-actions` and would be invisible behind the modal. Show it
+with modal-local state instead (see the new-package modal's `modalError`) and keep the modal open
+on failure so the user can see the message and retry.
 
 ### Game Modes
 
