@@ -85,12 +85,20 @@ function drawBackground(ctx, players, cfg) {
 
 // ── player sprites ───────────────────────────────────────────────────────────
 
-function drawPlayer(ctx, player, img, isGroom, cfg) {
+// `isTop` is the player's physical slot (top-right vs bottom-left), which in
+// solo mode may differ from `isGroom`'s role identity — used for the ammo
+// label's above/below placement, which depends on which side of the play
+// field this sprite is actually standing on. `waiting` marks the
+// non-controlled placeholder in solo mode: it plays a periodic idle "blink"
+// (a brief opacity dip, timed off `frame`) and skips the ammo label, since
+// it never has ammo selected meaningfully.
+function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
   if (!player.alive) return;
   const { x, y } = player;
   const w = PLAYER_WIDTH, h = PLAYER_HEIGHT;
 
   ctx.save();
+  if (waiting && frame % 200 < 10) ctx.globalAlpha = 0.35;
   if (img) {
     drawImageContain(ctx, img, x, y, w, h);
   } else {
@@ -103,12 +111,14 @@ function drawPlayer(ctx, player, img, isGroom, cfg) {
   }
   ctx.restore();
 
-  // Ammo label: below sprite for groom (at top), above sprite for bride (at bottom)
+  if (waiting) return;
+
+  // Ammo label: below sprite for the top slot, above sprite for the bottom slot
   const ammoMeta = AMMO_META[player.selectedAmmo];
   ctx.font      = '13px monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = ammoMeta.color;
-  ctx.fillText(ammoMeta.label, x + w / 2, isGroom ? y + h + 14 : y - 4);
+  ctx.fillText(ammoMeta.label, x + w / 2, isTop ? y + h + 14 : y - 4);
 }
 
 // ── bullets ──────────────────────────────────────────────────────────────────
@@ -520,8 +530,8 @@ function drawMeeting(ctx, state, assets, cfg) {
       const brideImg = assets?.bride?.complete ? assets.bride : null;
       const meetBride = { ...players.bride, x: GAME_WIDTH / 2 - PLAYER_WIDTH - gap, y: meetY, alive: true };
       const meetGroom = { ...players.groom, x: GAME_WIDTH / 2 + gap,              y: meetY, alive: true };
-      drawPlayer(ctx, meetBride, brideImg, false, cfg);
-      drawPlayer(ctx, meetGroom, groomImg, true, cfg);
+      drawPlayer(ctx, meetBride, brideImg, false, false, false, 0, cfg);
+      drawPlayer(ctx, meetGroom, groomImg, true, true, false, 0, cfg);
     }
   }
 
@@ -598,7 +608,7 @@ function drawMeeting(ctx, state, assets, cfg) {
 
 // ── title screen ─────────────────────────────────────────────────────────────
 
-function drawTitle(ctx, cfg) {
+function drawFullScreenStarryBackground(ctx, cfg) {
   const grad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
   grad.addColorStop(0,   cfg.colors.bgTop);
   grad.addColorStop(0.5, cfg.colors.bgMid);
@@ -610,6 +620,10 @@ function drawTitle(ctx, cfg) {
   for (let i = 0; i < 90; i++) {
     ctx.fillRect((i * 137 + 11) % CANVAS_WIDTH, (i * 97 + 23) % GAME_HEIGHT, 1, 1);
   }
+}
+
+function drawTitle(ctx, cfg) {
+  drawFullScreenStarryBackground(ctx, cfg);
 
   ctx.textAlign   = 'center';
   ctx.fillStyle   = '#fff';
@@ -643,6 +657,25 @@ function drawTitle(ctx, cfg) {
   });
 
   drawPanel(ctx, { acquiredItems: [], currentLevel: 0 }, cfg);
+}
+
+// ── mode select screen ──────────────────────────────────────────────────────
+// The actual choice buttons are DOM elements overlaid by Game.jsx (so they
+// scale/tap correctly regardless of the canvas's rendered size) — this just
+// paints the background and heading behind them.
+
+function drawModeSelect(ctx, cfg) {
+  drawFullScreenStarryBackground(ctx, cfg);
+
+  ctx.textAlign   = 'center';
+  ctx.font        = 'bold 32px monospace';
+  ctx.fillStyle   = cfg.colors.accent;
+  ctx.shadowColor = cfg.colors.accent; ctx.shadowBlur = 16;
+  ctx.fillText('Choose Your Game Mode', GAME_WIDTH / 2, 90);
+  ctx.shadowBlur = 0;
+
+  ctx.font = '16px Arial'; ctx.fillStyle = '#ccc';
+  ctx.fillText('Play together, or solo on one side', GAME_WIDTH / 2, 122);
 }
 
 // ── overlays ─────────────────────────────────────────────────────────────────
@@ -734,9 +767,11 @@ function drawOverlay(ctx, state, assets, cfg) {
 
 export function render(ctx, state, assets, config) {
   const cfg = config ?? DEFAULT_CONFIG;
-  const { phase, players, bullets, items, messages, advanceAnim } = state;
+  const { phase, players, bullets, items, messages, advanceAnim, mode, soloRole, topRole, frame } = state;
 
   if (phase === 'title') { drawTitle(ctx, cfg); return; }
+
+  if (phase === 'modeSelect') { drawModeSelect(ctx, cfg); return; }
 
   // ── Meeting scene: players physically meet ─────────────────────────────────
   if (phase === 'meeting') {
@@ -751,8 +786,11 @@ export function render(ctx, state, assets, config) {
 
   const groomImg = assets?.groom?.complete ? assets.groom : null;
   const brideImg = assets?.bride?.complete ? assets.bride : null;
-  drawPlayer(ctx, players.groom, groomImg, true, cfg);   // isGroom = true
-  drawPlayer(ctx, players.bride, brideImg, false, cfg);  // isGroom = false
+  const isSolo = mode === 'solo';
+  const groomWaiting = isSolo && soloRole !== 'groom';
+  const brideWaiting = isSolo && soloRole !== 'bride';
+  drawPlayer(ctx, players.groom, groomImg, true,  topRole === 'groom', groomWaiting, frame, cfg);
+  drawPlayer(ctx, players.bride, brideImg, false, topRole === 'bride', brideWaiting, frame, cfg);
 
   drawMessages(ctx, messages);
   drawAdvanceAnim(ctx, advanceAnim);

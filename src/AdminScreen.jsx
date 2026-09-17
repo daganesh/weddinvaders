@@ -37,6 +37,7 @@ export default function AdminScreen({ onExit }) {
   const [showNewPackageModal, setShowNewPackageModal] = useState(false);
   const [newPackageName, setNewPackageName] = useState('');
   const [newPackageCopyFrom, setNewPackageCopyFrom] = useState(selectedId);
+  const [modalError, setModalError] = useState('');
 
   // System packages (Default, 80s Arcade, …) are code-defined and read-only —
   // shipped on every deploy, never persisted, can't be edited/renamed/deleted.
@@ -62,18 +63,27 @@ export default function AdminScreen({ onExit }) {
   function openNewPackageModal() {
     setNewPackageName('');
     setNewPackageCopyFrom(selectedId);
+    setModalError('');
     setShowNewPackageModal(true);
+  }
+
+  function closeNewPackageModal() {
+    setShowNewPackageModal(false);
+    setModalError('');
   }
 
   function handleCreatePackage() {
     try {
       const pkg = createPackage(newPackageName, newPackageCopyFrom);
       setShowNewPackageModal(false);
+      setModalError('');
       refreshPackages();
       selectPackage(pkg.id);
       flashStatus(`Created "${pkg.name}".`);
     } catch (err) {
-      flashStatus(err.message);
+      // Shown inside the modal, not the page's status bar — the modal
+      // overlay sits above that bar and would hide it while open.
+      setModalError(err.message);
     }
   }
 
@@ -175,7 +185,7 @@ export default function AdminScreen({ onExit }) {
       </section>
 
       {showNewPackageModal && (
-        <div className="admin-modal-overlay" onClick={() => setShowNewPackageModal(false)}>
+        <div className="admin-modal-overlay" onClick={closeNewPackageModal}>
           <div className="admin-modal" onClick={e => e.stopPropagation()}>
             <h3>New package</h3>
             <label className="admin-text-row">
@@ -195,8 +205,9 @@ export default function AdminScreen({ onExit }) {
                 ))}
               </select>
             </label>
+            {modalError && <p className="admin-modal-error">{modalError}</p>}
             <div className="admin-modal-actions">
-              <button onClick={() => setShowNewPackageModal(false)}>Cancel</button>
+              <button onClick={closeNewPackageModal}>Cancel</button>
               <button className="admin-save" onClick={handleCreatePackage}>Create</button>
             </div>
           </div>

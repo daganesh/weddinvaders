@@ -21,7 +21,7 @@ src/
 ├── useAssets.js      # Preloads bride/groom/couple PNG images, preferring a customization override per role
 ├── customizationStore.js  # localStorage-backed customization config (images/colors/text) + DEFAULT_CONFIG + EIGHTIES_CONFIG — the only module that touches localStorage
 ├── useCustomization.js    # Ref-based hook wrapping customizationStore.getConfig()
-├── imageProcessing.js     # fileToImageDataUrl() — SVG uploads pass through as-is; fileToProcessedPngDataUrl() re-encodes raster uploads to PNG, fades near-white pixels to transparent
+├── imageProcessing.js     # fileToImageDataUrl() — SVG uploads pass through as-is; fileToProcessedPngDataUrl() downscales + re-encodes raster uploads to PNG, fades near-white pixels to transparent
 ├── AdminScreen.jsx   # Admin UI (reached via #/admin hash route) for editing the customization config
 ├── AdminScreen.css
 └── assets/
@@ -41,9 +41,12 @@ Game.jsx                          → knowledge/game-jsx.md
   ├── useGameState()  →  stateRef (never React state — avoids re-renders)
   │                                → knowledge/use-game-state.md
   ├── useAssets()     →  assetsRef
+  ├── uiPhase/uiMode/uiSoloRole  ←  lightweight React-state mirrors, updated
+  │                                 only on phase change (drive mode-select
+  │                                 overlay + couple/solo control swap)
   └── requestAnimationFrame loop:
         update(stateRef)   ← pure mutation via setState(updater)
-        render(ctx, state, assets)
+        render(ctx, state, assets, config)
                                    → knowledge/renderer.md
 ```
 Both `useGameState.js` and `renderer.js` read shared data/config from
@@ -59,10 +62,16 @@ to be swapped for a real API/DB later without touching call sites. `images` hold
 left `null` falls back to that item's emoji in `renderer.js`, exactly like a null portrait slot
 falls back to the bundled PNG. `AdminScreen.jsx` is the only writer. Before an uploaded file reaches
 that config, `AdminScreen.jsx` runs it through `imageProcessing.js`'s `fileToImageDataUrl()`: an SVG
-upload passes through untouched (already vector, already transparent where needed); anything else
-goes through `fileToProcessedPngDataUrl()`, which re-encodes it as PNG and fades near-white pixels
-to transparent (a simple threshold chroma-key, not true background removal — can also fade
-genuinely white parts of the subject).
+upload passes through untouched (already vector, already transparent where needed, no pixel
+dimension to downscale); anything else goes through `fileToProcessedPngDataUrl()`, which downscales
+it (longest edge capped at `MAX_DIMENSION = 480`px — plenty for the largest in-game use, the
+~320px-wide couple portrait; a raw phone photo can be 3000px+ and several MB once re-encoded
+losslessly as PNG otherwise), then re-encodes it as PNG and fades near-white pixels to transparent
+(a simple threshold chroma-key, not true background removal — can also fade genuinely white parts
+of the subject). `writeStore()` catches a `QuotaExceededError` from `localStorage.setItem` and
+rethrows a clear, user-facing message instead — copying a package with real (pre-downscale-fix)
+large images into another package could roughly double storage usage and exceed the browser's quota
+with no visible feedback (see `AdminScreen.jsx`'s modal error handling below).
 
 ### Packages
 
@@ -86,6 +95,28 @@ system-package id misuse or a duplicate — case-insensitive — package name). 
 button next to the Packages heading opens a small modal (name + a "copy from" dropdown of every
 existing package, system or custom) rather than always copying `default`; package chips show a
 "system" tag for `default`/`80s`. Deleting the active package falls back to `default`.
+
+**Modal error visibility gotcha**: `.admin-modal-overlay` has `z-index: 30`, which sits above the
+page's bottom `.admin-actions` bar — so an error raised by an action taken *inside* an open modal
+(e.g. `createPackage()` throwing) must never be shown via the page-level `flashStatus()`/`status`
+state, since that renders into `.admin-actions` and would be invisible behind the modal. Show it
+with modal-local state instead (see the new-package modal's `modalError`) and keep the modal open
+on failure so the user can see the message and retry.
+
+### Game Modes
+
+Two modes, chosen at a `modeSelect` phase reached from the title screen: **Couple** (both roles
+controllable, the original/default game) and **Solo** (one human-picked role — bride or groom —
+controllable; the other is a parked, occasionally-blinking placeholder, aimed at mobile players who
+want simpler one-thumb controls: swipe to move, tap to shoot, one button to cycle ammo). Rather than
+hardcoding "groom starts top-right, bride starts bottom-left" throughout the row-advance/meeting/
+spawn math, `getInitialState()` (`useGameState.js`) computes `topRole`/`bottomRole` once per level —
+swapped when playing solo as groom, so the human always starts at the bottom regardless of which
+character they picked — and every place that used to key off `players.bride`/`players.groom`
+positionally reads `players[topRole]`/`players[bottomRole]` instead. See `use-game-state.md`'s "Solo
+mode" section for the full rationale and `renderer.md`'s `drawPlayer` (`isTop`/`waiting` params) for
+the rendering-side equivalent. `game-jsx.md` covers the DOM side: the `modeSelect` overlay and the
+solo-only mobile control surface.
 
 ## Key Design Decisions
 - **`useRef` for game state**, not `useState` — the loop runs at 60 fps; React re-renders would be too slow.
