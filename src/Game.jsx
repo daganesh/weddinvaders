@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useGameState } from './useGameState';
 import { useAssets }    from './useAssets';
 import { useCustomization } from './useCustomization';
-import { getConfig }    from './customizationStore';
+import { getActiveConfig } from './customizationStore';
 import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
 import './Game.css';
@@ -38,7 +38,7 @@ export default function Game() {
 
   // Read directly (not via configRef) since this is display-only and refs
   // shouldn't be accessed during render.
-  const { brideColor, groomColor } = getConfig().colors;
+  const { brideColor, groomColor } = getActiveConfig().colors;
 
   return (
     <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>

@@ -1,9 +1,11 @@
-const STORAGE_KEY = 'weddinvaders:customization:v1';
+const STORAGE_KEY = 'weddinvaders:customization:v2';
+
+export const DEFAULT_PACKAGE_ID = 'default';
 
 // Mirrors every currently-hardcoded value in renderer.js/constants.js/levels.js,
-// so an empty/first-run localStorage produces today's game unchanged.
+// so the default package produces today's game unchanged. Also used by
+// renderer.js as its ultimate fallback when called without a config at all.
 export const DEFAULT_CONFIG = {
-  version: 1,
   images: {
     bride: null,   // data URL or null -> fall back to bundled bride-nobg.png
     groom: null,
@@ -34,43 +36,140 @@ export const DEFAULT_CONFIG = {
   },
 };
 
+function defaultPackage() {
+  return { id: DEFAULT_PACKAGE_ID, name: 'default', isDefault: true, ...structuredClone(DEFAULT_CONFIG) };
+}
+
+// Deep-merges a partial content object (images/colors/text) over DEFAULT_CONFIG,
+// so a partial/missing/corrupt package never leaves a field undefined.
+function mergeContent(partial) {
+  return {
+    images: { ...DEFAULT_CONFIG.images, ...partial?.images },
+    colors: { ...DEFAULT_CONFIG.colors, ...partial?.colors },
+    text: {
+      ...DEFAULT_CONFIG.text,
+      ...partial?.text,
+      familyLabels: { ...DEFAULT_CONFIG.text.familyLabels, ...partial?.text?.familyLabels },
+      levels: DEFAULT_CONFIG.text.levels.map((d, i) => ({ ...d, ...partial?.text?.levels?.[i] })),
+    },
+  };
+}
+
 function readRaw() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
     return null;
   }
 }
 
-function mergeConfig(partial) {
-  if (!partial) return structuredClone(DEFAULT_CONFIG);
-  return {
-    version: DEFAULT_CONFIG.version,
-    images: { ...DEFAULT_CONFIG.images, ...partial.images },
-    colors: { ...DEFAULT_CONFIG.colors, ...partial.colors },
-    text: {
-      ...DEFAULT_CONFIG.text,
-      ...partial.text,
-      familyLabels: { ...DEFAULT_CONFIG.text.familyLabels, ...partial.text?.familyLabels },
-      levels: DEFAULT_CONFIG.text.levels.map((d, i) => ({ ...d, ...partial.text?.levels?.[i] })),
-    },
-  };
+// Builds the full { activePackageId, packages } store, always including the
+// (code-defined, never persisted) default package plus any saved custom ones.
+function normalizeStore(raw) {
+  const packages = { [DEFAULT_PACKAGE_ID]: defaultPackage() };
+  if (raw?.packages && typeof raw.packages === 'object') {
+    for (const [id, pkg] of Object.entries(raw.packages)) {
+      if (id === DEFAULT_PACKAGE_ID || !pkg || typeof pkg.name !== 'string') continue;
+      packages[id] = { id, name: pkg.name, isDefault: false, ...mergeContent(pkg) };
+    }
+  }
+  const activePackageId = raw?.activePackageId && packages[raw.activePackageId]
+    ? raw.activePackageId
+    : DEFAULT_PACKAGE_ID;
+  return { activePackageId, packages };
 }
 
-// Storage boundary: this is the only module that touches localStorage directly,
-// so it can be swapped for a real API/DB client later without changing callers.
-export function getConfig() {
-  return mergeConfig(readRaw());
+function writeStore(store) {
+  const packages = {};
+  for (const [id, pkg] of Object.entries(store.packages)) {
+    if (id === DEFAULT_PACKAGE_ID) continue; // derived from code, never persisted
+    packages[id] = pkg;
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, activePackageId: store.activePackageId, packages }));
 }
 
-export function saveConfig(config) {
-  const merged = mergeConfig(config);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  return merged;
+function isNameTaken(store, name, excludeId) {
+  const norm = name.trim().toLowerCase();
+  return Object.values(store.packages).some(p => p.id !== excludeId && p.name.trim().toLowerCase() === norm);
 }
 
-export function resetToDefaults() {
-  localStorage.removeItem(STORAGE_KEY);
-  return structuredClone(DEFAULT_CONFIG);
+// ── Public API — the only surface every other module should depend on.
+
+export function listPackages() {
+  const { packages } = normalizeStore(readRaw());
+  return Object.values(packages).sort((a, b) => {
+    if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+export function getActivePackageId() {
+  return normalizeStore(readRaw()).activePackageId;
+}
+
+export function getPackage(id) {
+  const { packages } = normalizeStore(readRaw());
+  return packages[id] ?? packages[DEFAULT_PACKAGE_ID];
+}
+
+// Resolves the config the running game should actually render with.
+export function getActiveConfig() {
+  const store = normalizeStore(readRaw());
+  return store.packages[store.activePackageId] ?? store.packages[DEFAULT_PACKAGE_ID];
+}
+
+export function setActivePackage(id) {
+  const store = normalizeStore(readRaw());
+  if (!store.packages[id]) throw new Error('Package not found.');
+  store.activePackageId = id;
+  writeStore(store);
+  return id;
+}
+
+// Creates a new package seeded from the default package's values.
+export function createPackage(name) {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) throw new Error('Package name is required.');
+  const store = normalizeStore(readRaw());
+  if (isNameTaken(store, trimmed)) throw new Error(`A package named "${trimmed}" already exists.`);
+  const id = `pkg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const pkg = { id, name: trimmed, isDefault: false, ...structuredClone(DEFAULT_CONFIG) };
+  store.packages[id] = pkg;
+  writeStore(store);
+  return pkg;
+}
+
+// Overwrites a non-default package's content (images/colors/text).
+export function updatePackage(id, content) {
+  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package is read-only.');
+  const store = normalizeStore(readRaw());
+  const existing = store.packages[id];
+  if (!existing) throw new Error('Package not found.');
+  const updated = { ...existing, ...mergeContent(content) };
+  store.packages[id] = updated;
+  writeStore(store);
+  return updated;
+}
+
+export function renamePackage(id, newName) {
+  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package cannot be renamed.');
+  const trimmed = (newName ?? '').trim();
+  if (!trimmed) throw new Error('Package name is required.');
+  const store = normalizeStore(readRaw());
+  if (!store.packages[id]) throw new Error('Package not found.');
+  if (isNameTaken(store, trimmed, id)) throw new Error(`A package named "${trimmed}" already exists.`);
+  store.packages[id] = { ...store.packages[id], name: trimmed };
+  writeStore(store);
+  return store.packages[id];
+}
+
+export function deletePackage(id) {
+  if (id === DEFAULT_PACKAGE_ID) throw new Error('The default package cannot be removed.');
+  const store = normalizeStore(readRaw());
+  if (!store.packages[id]) return;
+  delete store.packages[id];
+  if (store.activePackageId === id) store.activePackageId = DEFAULT_PACKAGE_ID;
+  writeStore(store);
 }

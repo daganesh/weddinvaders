@@ -7,7 +7,7 @@ import {
   BULLET_SPEED, BULLET_WIDTH, BULLET_HEIGHT,
   ITEM_WIDTH, ITEM_HEIGHT,
   AMMO_DAMAGE, AMMO_ORDER,
-  ROW_ADVANCE_SPEEDUP, HOURGLASS_SLOW_SECONDS,
+  ROW_ADVANCE_SPEEDUP, HOURGLASS_SLOW_SECONDS, NO_AMMO_FASTFORWARD,
 } from './constants';
 import { LEVELS, getSpawnPool, isLevelComplete } from './levels';
 
@@ -281,7 +281,13 @@ export function useGameState() {
       let advanceRate = requiredDone ? ROW_ADVANCE_SPEEDUP : 1;
       if (slowTimer > 0) advanceRate *= 0.5;
 
-      if (frame % FPS === 0) {
+      // Once cash, invites, and hearts are all spent, neither player can act
+      // again — fast-forward to the level's outcome instead of waiting out
+      // the real-time clock.
+      const outOfAmmo = money < 100 && ammo.invite <= 0 && ammo.heart <= 0;
+      const tickInterval = outOfAmmo ? Math.max(1, Math.round(FPS / NO_AMMO_FASTFORWARD)) : FPS;
+
+      if (frame % tickInterval === 0) {
         time = Math.max(0, time - 1);
         rowAdvanceTimer += advanceRate;
       }
