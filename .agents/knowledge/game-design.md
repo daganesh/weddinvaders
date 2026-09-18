@@ -101,10 +101,13 @@ wedding-arranging companies. Reached via a `#/admin` hash route (a settings butt
 screen links there); config is stored in `localStorage` behind `src/customizationStore.js` as
 named **packages** (see `architecture.md`'s "Packages" section) — a permanent read-only `default`
 plus any number of admin-created ones, exactly one of which is "active" (used by the running game)
-at a time. In scope per package: the bride/groom/couple images (file upload → data URL, auto
-re-encoded to PNG with near-white background pixels faded to transparent), a small color palette
-(background gradient, accent, bride/groom fallback colors), and specific wedding text (title,
-tagline, win/lose messages, each level's name/subtitle, and the "Her Family"/"His Family" labels).
+at a time. In scope per package: the bride/groom/couple images and a header banner image shown
+above the game on every screen (file upload → data URL, auto re-encoded to PNG with near-white
+background pixels faded to transparent), a small color palette (background gradient, accent,
+bride/groom fallback colors), and specific wedding text (title, tagline, win/lose messages, each
+level's name/subtitle, and the "Her Family"/"His Family" labels). The banner defaults to a bundled
+stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 80s Arcade system
+package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`.
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads
