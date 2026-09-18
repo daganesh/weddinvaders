@@ -1,5 +1,7 @@
 import { WEDDING_ITEMS } from './constants';
 
+import eightiesBannerSvg from './assets/banner-80s.svg';
+
 import ringsIcon        from './assets/icons/rings.svg';
 import officiantIcon    from './assets/icons/officiant.svg';
 import cateringIcon     from './assets/icons/catering.svg';
@@ -37,6 +39,7 @@ export const DEFAULT_CONFIG = {
     bride: null,   // data URL or null -> fall back to bundled bride-nobg.png
     groom: null,
     couple: null,
+    banner: null,  // data URL or null -> fall back to bundled banner-default.svg
     ...emptyItemImages(),
   },
   colors: {
@@ -74,6 +77,7 @@ export const EIGHTIES_CONFIG = {
     bride: null,
     groom: null,
     couple: null,
+    banner: eightiesBannerSvg,
     rings: ringsIcon,
     officiant: officiantIcon,
     catering: cateringIcon,

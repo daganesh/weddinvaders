@@ -33,6 +33,17 @@ body {
   width: 100%;
 }
 
+.game-banner {
+  display: block;
+  width: 100%;
+  max-width: 910px;
+  height: auto;
+  max-height: 90px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0; /* keep its natural size even where a sibling is flex:1 */
+}
+
 .game-toolbar {
   display: flex;
   justify-content: flex-end;
@@ -248,5 +259,9 @@ body {
                     the canvas's own preferred (aspect-ratio-driven) height */
     min-height: 0; /* let a flex child shrink below its content size */
     overflow: hidden;
+  }
+
+  .game-banner {
+    max-height: 44px; /* a slim strip — vertical space here is precious, see canvas-wrapper above */
   }
 }

@@ -15,9 +15,10 @@ import { WEDDING_ITEMS } from './constants';
 import brideImgSrc from './assets/bride-nobg.png';
 import groomImgSrc from './assets/groom-nobg.png';
 import coupleImgSrc from './assets/couple-nobg.png';
+import bannerImgSrc from './assets/banner-default.svg';
 import './AdminScreen.css';
 
-const DEFAULT_IMG_SRC = { bride: brideImgSrc, groom: groomImgSrc, couple: coupleImgSrc };
+const DEFAULT_IMG_SRC = { bride: brideImgSrc, groom: groomImgSrc, couple: coupleImgSrc, banner: bannerImgSrc };
 const PORTRAIT_ROLES = [
   { role: 'bride', label: 'Bride' },
   { role: 'groom', label: 'Groom' },
@@ -261,6 +262,25 @@ export default function AdminScreen({ onExit }) {
               </div>
             </div>
           ))}
+        </section>
+
+        <section>
+          <h2>Header Banner</h2>
+          <p className="admin-hint">
+            Shown above the game as a page header, on every screen.
+          </p>
+          <div className="admin-image-row">
+            <img
+              className="admin-banner-preview"
+              src={draft.images.banner || DEFAULT_IMG_SRC.banner}
+              alt="Header banner"
+            />
+            <div className="admin-image-controls">
+              <span>Banner</span>
+              <input type="file" accept="image/*,.svg" onChange={e => handleImageFile('banner', e.target.files[0])} />
+              <button onClick={() => resetImage('banner')}>Reset to default</button>
+            </div>
+          </div>
         </section>
 
         <section>

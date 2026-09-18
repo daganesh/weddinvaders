@@ -5,6 +5,7 @@ import { useCustomization } from './useCustomization';
 import { getActiveConfig } from './customizationStore';
 import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
+import defaultBannerSrc from './assets/banner-default.svg';
 import './Game.css';
 
 export default function Game() {
@@ -91,12 +92,15 @@ export default function Game() {
   const activeConfig = getActiveConfig();
   const { brideColor, groomColor } = activeConfig.colors;
   const { bride: brideName, groom: groomName } = activeConfig.text.names;
+  const bannerSrc = activeConfig.images.banner || defaultBannerSrc;
 
   const showControls = uiPhase !== 'title' && uiPhase !== 'modeSelect';
 
   return (
     <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
       <div className="game-container">
+        <img className="game-banner" src={bannerSrc} alt="Wedding banner" />
+
         <div className="game-toolbar">
           <button
             className="admin-btn"
