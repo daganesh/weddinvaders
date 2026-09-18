@@ -46,6 +46,11 @@
   background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
+.admin-banner-preview {
+  width: 220px;
+  height: 38px; /* matches the banner SVGs' 640:110 aspect ratio */
+}
+
 .admin-image-emoji-fallback {
   width: 56px;
   height: 56px;
