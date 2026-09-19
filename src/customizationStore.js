@@ -28,12 +28,6 @@ function emptyItemImages() {
   return Object.fromEntries(ITEM_IMAGE_KEYS.map(id => [id, null]));
 }
 
-// Mirrors every currently-hardcoded value in renderer.js/constants.js/levels.js,
-// so the default package produces today's game unchanged. Also used by
-// renderer.js as its ultimate fallback when called without a config at all.
-// Every item-icon slot is null here — renderer.js falls back to the item's
-// emoji, exactly like a null bride/groom/couple slot falls back to the
-// bundled portrait PNG.
 // Opening-page links (RSVP, gift registry, song requests, …). Each entry is
 // just `{ id, label, url }` today — a plain link, hidden on the title screen
 // while `url` is empty. `id` is a stable identifier (not shown to the admin)
@@ -45,12 +39,27 @@ function emptyItemImages() {
 // identity. New links the admin adds get a generated id and stay plain links
 // indefinitely; only these three well-known ids are candidates for that kind
 // of future upgrade.
+//
+// They point at the bundled static demo pages in `public/examples/` (see
+// `Game.jsx`'s `withProtocol()`, which knows to leave a site-relative path
+// like this alone) so the feature is visible and clickable out of the box —
+// not silently invisible behind an empty url, which is exactly what made this
+// feature look broken before it had real defaults. An admin replaces these
+// with their real RSVP form / registry / playlist link, same as any other
+// package's links.
+const EXAMPLES_BASE = `${import.meta.env.BASE_URL}examples/`;
 const DEFAULT_LINKS = [
-  { id: 'rsvp',     label: 'RSVP',          url: '' },
-  { id: 'registry', label: 'Gift Registry', url: '' },
-  { id: 'songs',    label: 'Song Requests', url: '' },
+  { id: 'rsvp',     label: 'RSVP',          url: `${EXAMPLES_BASE}rsvp.html` },
+  { id: 'registry', label: 'Gift Registry', url: `${EXAMPLES_BASE}registry.html` },
+  { id: 'songs',    label: 'Song Requests', url: `${EXAMPLES_BASE}songs.html` },
 ];
 
+// Mirrors every currently-hardcoded value in renderer.js/constants.js/levels.js,
+// so the default package produces today's game unchanged. Also used by
+// renderer.js as its ultimate fallback when called without a config at all.
+// Every item-icon slot is null here — renderer.js falls back to the item's
+// emoji, exactly like a null bride/groom/couple slot falls back to the
+// bundled portrait PNG.
 export const DEFAULT_CONFIG = {
   images: {
     bride: null,   // data URL or null -> fall back to bundled bride-nobg.png
