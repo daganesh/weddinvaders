@@ -31,6 +31,13 @@ src/
     ├── banner-default.svg  # bundled fallback for the header banner (Default package)
     ├── banner-80s.svg       # 80s Arcade package's pixel-art header banner
     └── icons/         # 12 hand-built 16×16 pixel-art SVGs (one per WEDDING_ITEMS id), the 80s Arcade system package's item images
+
+public/
+└── examples/         # static demo pages the Default/80s packages' seeded links point to —
+    ├── style.css     # not part of the Vite/React build; served verbatim at <base>/examples/*
+    ├── rsvp.html
+    ├── registry.html
+    └── songs.html
 ```
 
 `App.jsx` is no longer a pure passthrough: it does a minimal hash-based route check
@@ -123,16 +130,27 @@ partial/legacy package never leaves one `undefined`), `links` is admin-managed f
 `sanitizeLinks()`, which repairs missing/non-string fields rather than merging entry-by-entry) and
 only falls back to `DEFAULT_CONFIG.links` when the package has no `links` array at all (e.g. one
 saved before this feature existed). `DEFAULT_CONFIG.links` seeds exactly three entries — ids `rsvp`,
-`registry`, `songs` — each with an empty `url` (so a fresh package shows no links until an admin
-fills one in) and a display `label` the admin can freely rename. `id` is a stable identifier never
-shown in `AdminScreen.jsx`'s UI: today every entry (the three seeded ones and any the admin adds
-via "+ Add link") renders identically as a plain link, but keeping a stable, well-known id on the
-three seeded ones is what would let a future version single out *that specific* entry to upgrade
-into something richer (an embedded RSVP form, a live song-request list, a registry checklist)
-without having to guess which entry is which from a label the admin may have renamed — labels/order
-aren't reliable identity, ids are. An admin-added custom link gets a generated id and stays a plain
-link indefinitely. `Game.jsx` renders each visible link's `href` through `withProtocol()`, which
-prepends `https://` when the admin typed a bare domain (`example.com/rsvp`) instead of a full URL.
+`registry`, `songs` — each pointing at one of the bundled static demo pages in `public/examples/`
+(`${import.meta.env.BASE_URL}examples/{rsvp,registry,songs}.html`) rather than an empty `url`: an
+earlier version shipped these with a blank `url` (hidden entirely, per the "hide while blank" rule
+below) on the theory that a dead placeholder link was worse than no link — in practice that just
+made the whole feature look broken/invisible out of the box, since the *only* built-in packages are
+these two read-only system ones and neither ever showed anything. Real demo pages fix that: the
+Default/80s title screens now show all three links immediately, each opening its own simple styled
+page (in a new tab) explaining it's a placeholder and naming where to swap in the couple's real
+RSVP form / registry / playlist link. An admin can still set any `url` back to empty to hide a link
+individually. `id` is a stable identifier never shown in `AdminScreen.jsx`'s UI: today every entry
+(the three seeded ones and any the admin adds via "+ Add link") renders identically as a plain link,
+but keeping a stable, well-known id on the three seeded ones is what would let a future version
+single out *that specific* entry to upgrade into something richer (an embedded RSVP form, a live
+song-request list, a registry checklist) without having to guess which entry is which from a label
+the admin may have renamed — labels/order aren't reliable identity, ids are. An admin-added custom
+link gets a generated id and stays a plain link indefinitely. `Game.jsx` renders each visible link's
+`href` through `withProtocol()`, which prepends `https://` when the admin typed a bare domain
+(`example.com/rsvp`) instead of a full URL, but leaves a site-relative path (like the bundled
+examples' `/weddinvaders/examples/...` urls) untouched. Every link opens via
+`target="_blank" rel="noopener noreferrer"` — a real anchor, not a canvas click handler — so it
+always opens in a new tab and never navigates the game away.
 
 ### Game Modes
 

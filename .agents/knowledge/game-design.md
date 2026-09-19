@@ -110,9 +110,13 @@ stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 
 package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`. Also in
 scope: an admin-managed list of **opening-page links** (RSVP, gift registry, song requests, and
 anything else — directions, wedding website, hotel block…), shown as pill buttons below the canvas
-on the title screen only, hidden individually while blank. Plain links today; see `architecture.md`'s
-"Opening-page links" for why each entry carries a stable id (so specific well-known ones could later
-become an embedded RSVP form, song-request list, or registry checklist instead of just a link).
+on the title screen only, hidden individually while blank. Both system packages seed all three with
+a real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
+opens in a new tab and explains it's a placeholder), so the feature is visible without any admin
+setup — an earlier version left them blank by default, which just made the feature invisible. Plain
+links today; see `architecture.md`'s "Opening-page links" for why each entry carries a stable id (so
+specific well-known ones could later become an embedded RSVP form, song-request list, or registry
+checklist instead of just a link).
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads
