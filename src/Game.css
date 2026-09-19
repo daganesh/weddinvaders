@@ -115,6 +115,84 @@ body {
   border-color: #ffd700;
 }
 
+/* The title screen's whole "notice" — game title, tagline, wedding invite
+   text, opening-page links, and control instructions — lives here as real
+   HTML (see renderer.js's drawTitle, which now only paints the starfield
+   background behind it) rather than canvas-drawn text, since the
+   admin-customizable invitation copy is arbitrary-length and needs to wrap
+   like normal text, and the links need to be real anchors regardless.
+   `pointer-events: none` on the container (re-enabled only on the links)
+   lets a click anywhere else on the title screen still reach the canvas
+   underneath and start the game, exactly like .mode-select-overlay above. */
+.title-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 5% 6% 4%;
+  overflow-y: auto;
+  pointer-events: none;
+  text-align: center;
+  line-height: normal; /* .canvas-wrapper sets line-height: 0 (to avoid baseline
+                           gap under the canvas), which would otherwise inherit
+                           here and collapse/overlap every line of text */
+}
+
+.title-overlay .title-link {
+  pointer-events: auto;
+}
+
+.title-heading {
+  font-size: clamp(26px, 6vw, 44px);
+  font-weight: bold;
+  font-family: monospace;
+  color: #fff;
+  text-shadow: 0 0 20px var(--wv-accent-color, #ffd700);
+  margin: 0;
+}
+
+.title-tagline {
+  font-size: clamp(13px, 2.4vw, 17px);
+  color: var(--wv-accent-color, #ffd700);
+  margin: 0;
+}
+
+.title-invitation {
+  max-width: 520px;
+  font-size: clamp(12px, 2.1vw, 14px);
+  line-height: 1.5;
+  color: #e8ecff;
+  margin: 2px 0;
+}
+
+.title-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.title-instructions p {
+  margin: 0;
+  font-size: clamp(11px, 1.9vw, 14px);
+  color: #ccc;
+}
+
+.title-instructions .title-tip {
+  color: #999;
+}
+
+.title-prompt {
+  margin: 4px 0 0;
+  font-weight: bold;
+  font-size: clamp(13px, 2.3vw, 16px);
+  color: var(--wv-accent-color, #ffd700);
+  text-shadow: 0 0 8px var(--wv-accent-color, #ffd700);
+}
+
 .key-legend {
   display: flex;
   gap: 32px;
@@ -295,5 +373,10 @@ body {
   .title-link {
     font-size: 12px;
     padding: 6px 12px;
+  }
+
+  .title-overlay {
+    gap: 6px;
+    padding: 4% 5% 3%;
   }
 }

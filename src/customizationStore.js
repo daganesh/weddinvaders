@@ -80,6 +80,13 @@ export const DEFAULT_CONFIG = {
   text: {
     title: "WEDDIN'VADERS",
     tagline: 'Buy the wedding of your dreams!',
+    // Shown on the title screen above the opening-page links — the actual
+    // wedding-invite copy, freeform (no {bride}/{groom} placeholder
+    // substitution, same as every other text field here — an admin who
+    // renames the couple updates this by hand too).
+    invitation: "You're invited to celebrate the wedding of Bride & Groom! "
+      + 'Play through the game to help fund the big day — then RSVP, check '
+      + 'the registry, and send in your song requests below.',
     winMessage: "🎉 YOU'RE MARRIED! 🎉",
     loseMessage: '💔 Wedding Failed!',
     names: { bride: 'Bride', groom: 'Groom' },
