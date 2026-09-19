@@ -383,6 +383,15 @@ export default function AdminScreen({ onExit }) {
             Tagline
             <input value={draft.text.tagline} onChange={e => setTextField('tagline', e.target.value)} />
           </label>
+          <label className="admin-text-row admin-text-row-wide">
+            Invitation text
+            <textarea
+              rows={3}
+              value={draft.text.invitation}
+              onChange={e => setTextField('invitation', e.target.value)}
+              placeholder="You're invited to celebrate the wedding of..."
+            />
+          </label>
           <label className="admin-text-row">
             Win message
             <input value={draft.text.winMessage} onChange={e => setTextField('winMessage', e.target.value)} />

@@ -118,6 +118,17 @@
   font-size: 14px;
 }
 
+.admin-text-row-wide {
+  max-width: 480px;
+}
+
+.admin-text-row textarea {
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
 .admin-level-row {
   display: grid;
   grid-template-columns: 60px 1fr 1fr;

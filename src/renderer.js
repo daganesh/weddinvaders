@@ -629,40 +629,14 @@ function drawFullScreenStarryBackground(ctx, cfg) {
   }
 }
 
+// The title screen's text — game title, tagline, the wedding invitation
+// message, opening-page links, and control instructions — is a DOM overlay
+// in Game.jsx's `.title-overlay` (same reasoning as `drawModeSelect` below:
+// real HTML naturally wraps/reflows the admin-customizable, variable-length
+// invitation text, and the links need to be real anchors anyway). This just
+// paints the background and the still-canvas-drawn side panel behind it.
 function drawTitle(ctx, cfg) {
   drawFullScreenStarryBackground(ctx, cfg);
-
-  ctx.textAlign   = 'center';
-  ctx.fillStyle   = '#fff';
-  ctx.font        = 'bold 58px monospace';
-  ctx.shadowColor = cfg.colors.accent; ctx.shadowBlur = 24;
-  ctx.fillText(cfg.text.title, GAME_WIDTH / 2, 140);
-  ctx.shadowBlur = 0;
-
-  ctx.font = '20px Arial'; ctx.fillStyle = cfg.colors.accent;
-  ctx.fillText(cfg.text.tagline, GAME_WIDTH / 2, 188);
-
-  const lines = [
-    `👰 ${cfg.text.names.bride}  —  A/D move   ·   S ammo   ·   W shoot`,
-    `🤵 ${cfg.text.names.groom}  —  ←/→ move   ·   ↑/↓ ammo   ·   Space shoot`,
-    '',
-    '💵 Cash shoots at items to buy them',
-    '💌 Send invites to guests — they attend & bring gift money!',
-    '💕 Send hearts to family — they donate BIG bucks!',
-    '',
-    'Collect items on the right panel. N = fast-forward once done!',
-    '',
-    '— Press any key to begin —',
-  ];
-  lines.forEach((line, i) => {
-    const isLast = i === lines.length - 1;
-    ctx.font      = isLast ? 'bold 18px Arial' : '15px Arial';
-    ctx.fillStyle = isLast ? cfg.colors.accent : (line === '' ? '#fff' : '#ccc');
-    if (isLast) { ctx.shadowColor = cfg.colors.accent; ctx.shadowBlur = 10; }
-    ctx.fillText(line, GAME_WIDTH / 2, 240 + i * 26);
-    ctx.shadowBlur = 0;
-  });
-
   drawPanel(ctx, { acquiredItems: [], currentLevel: 0 }, cfg);
 }
 

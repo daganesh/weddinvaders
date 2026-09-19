@@ -100,17 +100,35 @@ export default function Game() {
   // Read directly (not via configRef) since this is display-only and refs
   // shouldn't be accessed during render.
   const activeConfig = getActiveConfig();
-  const { brideColor, groomColor } = activeConfig.colors;
+  const { brideColor, groomColor, accent } = activeConfig.colors;
   const { bride: brideName, groom: groomName } = activeConfig.text.names;
   const bannerSrc = activeConfig.images.banner || defaultBannerSrc;
   // Hidden individually while their URL is blank, so an admin can pre-seed
   // the well-known RSVP/registry/songs slots without showing dead links.
   const visibleLinks = activeConfig.links.filter(l => l.url.trim());
+  const linksRow = visibleLinks.length > 0 && (
+    <div className="title-links">
+      {visibleLinks.map(link => (
+        <a
+          key={link.id}
+          className="title-link"
+          href={withProtocol(link.url.trim())}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {link.label || 'Link'}
+        </a>
+      ))}
+    </div>
+  );
 
   const showControls = uiPhase !== 'title' && uiPhase !== 'modeSelect';
 
   return (
-    <div className="game-wrapper" style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor }}>
+    <div
+      className="game-wrapper"
+      style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor, '--wv-accent-color': accent }}
+    >
       <div className="game-container">
         <img className="game-banner" src={bannerSrc} alt="Wedding banner" />
 
@@ -149,23 +167,35 @@ export default function Game() {
               </button>
             </div>
           )}
+
+          {uiPhase === 'title' && (
+            <div className="title-overlay">
+              <h1 className="title-heading">{activeConfig.text.title}</h1>
+              <p className="title-tagline">{activeConfig.text.tagline}</p>
+
+              {activeConfig.text.invitation.trim() && (
+                <p className="title-invitation">{activeConfig.text.invitation}</p>
+              )}
+
+              {linksRow}
+
+              <div className="title-instructions">
+                <p>👰 {brideName} — A/D move · S ammo · W shoot</p>
+                <p>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</p>
+                <p className="title-tip">💵 Cash shoots at items to buy them</p>
+                <p className="title-tip">💌 Send invites to guests — they attend &amp; bring gift money!</p>
+                <p className="title-tip">💕 Send hearts to family — they donate BIG bucks!</p>
+                <p className="title-tip">Collect items on the right panel. N = fast-forward once done!</p>
+              </div>
+
+              <p className="title-prompt">— Press any key to begin —</p>
+            </div>
+          )}
         </div>
 
-        {uiPhase === 'title' && visibleLinks.length > 0 && (
-          <div className="title-links">
-            {visibleLinks.map(link => (
-              <a
-                key={link.id}
-                className="title-link"
-                href={withProtocol(link.url.trim())}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {link.label || 'Link'}
-              </a>
-            ))}
-          </div>
-        )}
+        {/* Opening-page links stay reachable after the title screen is gone,
+            not just inside .title-overlay above. */}
+        {showControls && linksRow}
 
         {/* On-screen buttons (visible on touch devices) */}
         {showControls && uiMode === 'couple' && (
