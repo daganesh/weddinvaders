@@ -107,7 +107,12 @@ background pixels faded to transparent), a small color palette (background gradi
 bride/groom fallback colors), and specific wedding text (title, tagline, win/lose messages, each
 level's name/subtitle, and the "Her Family"/"His Family" labels). The banner defaults to a bundled
 stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 80s Arcade system
-package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`.
+package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`. Also in
+scope: an admin-managed list of **opening-page links** (RSVP, gift registry, song requests, and
+anything else — directions, wedding website, hotel block…), shown as pill buttons below the canvas
+on the title screen only, hidden individually while blank. Plain links today; see `architecture.md`'s
+"Opening-page links" for why each entry carries a stable id (so specific well-known ones could later
+become an embedded RSVP form, song-request list, or registry checklist instead of just a link).
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads

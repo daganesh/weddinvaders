@@ -32,6 +32,7 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
 | `.mobile-controls` block | in JSX | Couple-mode-only (`showControls && uiMode === 'couple'`) on-screen ammo-select and shoot buttons for touch devices, dispatching `SELECT_AMMO` / `SHOOT` actions per role. |
 | `.solo-controls` block | in JSX | Solo-mode-only (`showControls && uiMode === 'solo'`) mobile control surface: a hint line ("Swipe canvas to move · Tap to shoot") and a single "🔄 Switch Ammo" button dispatching `CYCLE_AMMO` for `uiSoloRole` — deliberately simpler than the couple-mode ammo-select row, per the mobile-first goal of solo mode. |
 | `.key-legend` | in JSX | On-screen text listing keyboard controls — kept in sync with the real bindings in `useGameState.js` (bride: A/D move · S ammo · W shoot; groom: ←/→ move · ↑/↓ ammo · Space shoot). Switches between the couple two-line legend and a single-role line (with a "(or swipe/tap)" suffix) based on `uiMode`/`uiSoloRole`. The displayed name (default "Bride"/"Groom") comes from `activeConfig.text.names`, same source and same non-ref read pattern as the shoot-button colors below. |
+| `.title-links` block | in JSX | Title-phase-only (`uiPhase === 'title'`) row of real `<a target="_blank">` pill links, one per `activeConfig.links` entry whose `url` is non-empty (`visibleLinks`, computed the same non-ref way as `activeConfig` above) — see `architecture.md`'s "Opening-page links". Each `href` goes through the module-level `withProtocol()` helper, which prepends `https://` when the admin typed a bare domain. Real anchors, not canvas-drawn or an absolutely-positioned overlay: they sit in normal flow below `.canvas-wrapper`, so a click lands on the `<a>` itself and never reaches `handleCanvasClick` (which would otherwise treat any title-phase click as `START`) — verified via Playwright that clicking a link opens a new tab without advancing the game phase. `flex-shrink: 0` in `Game.css`, same reasoning as `.game-banner`. |
 
 ## Relationships / Cross-links
 - Constructs and is the sole caller of `useGameState()` — see [`use-game-state.md`](use-game-state.md).
@@ -55,6 +56,6 @@ Rendered by `App.jsx` (`<Game />`, no props) → the only consumer is `src/main.
   matters here: with `auto`, the browser sizes this flex item from the canvas's own preferred
   (aspect-ratio-driven) height before shrinking, which under-shrinks it and pushes couple mode's
   taller two-row `.mobile-controls` bar off the bottom of the screen. The same query also shrinks
-  `.game-banner`'s `max-height` from 90px to 44px, since on a phone that vertical space is much
-  better spent on the canvas.
+  `.game-banner`'s `max-height` from 90px to 44px, and `.title-link`'s padding/font-size, since on a
+  phone that vertical space is much better spent on the canvas.
 - Manual verification of this component's wiring is covered by [`testing.md`](testing.md) and [`write-test.md`](../skills/write-test.md).

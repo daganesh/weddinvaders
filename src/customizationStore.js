@@ -34,6 +34,23 @@ function emptyItemImages() {
 // Every item-icon slot is null here — renderer.js falls back to the item's
 // emoji, exactly like a null bride/groom/couple slot falls back to the
 // bundled portrait PNG.
+// Opening-page links (RSVP, gift registry, song requests, …). Each entry is
+// just `{ id, label, url }` today — a plain link, hidden on the title screen
+// while `url` is empty. `id` is a stable identifier (not shown to the admin)
+// rather than incidental array position, so a future version can single out
+// a *specific* well-known entry (e.g. upgrade the `rsvp`-id one into an
+// embedded RSVP form, or `songs` into an embedded song-request list) without
+// having to guess which entry is which from its current label — an admin can
+// freely rename, remove, or add entries, so labels/order aren't reliable
+// identity. New links the admin adds get a generated id and stay plain links
+// indefinitely; only these three well-known ids are candidates for that kind
+// of future upgrade.
+const DEFAULT_LINKS = [
+  { id: 'rsvp',     label: 'RSVP',          url: '' },
+  { id: 'registry', label: 'Gift Registry', url: '' },
+  { id: 'songs',    label: 'Song Requests', url: '' },
+];
+
 export const DEFAULT_CONFIG = {
   images: {
     bride: null,   // data URL or null -> fall back to bundled bride-nobg.png
@@ -50,6 +67,7 @@ export const DEFAULT_CONFIG = {
     brideColor: '#ff69b4',
     groomColor: '#4169e1',
   },
+  links: DEFAULT_LINKS,
   text: {
     title: "WEDDIN'VADERS",
     tagline: 'Buy the wedding of your dreams!',
@@ -118,12 +136,28 @@ function systemPackage(id) {
   return { id, name, isDefault: true, ...structuredClone(config) };
 }
 
-// Deep-merges a partial content object (images/colors/text) over DEFAULT_CONFIG,
+// Links are a free-form, admin-managed list (add/remove/reorder), not a
+// fixed set of named fields like images/colors — so unlike those, a package
+// that has its own `links` array uses it as-is rather than being merged
+// entry-by-entry over the defaults. Guards against corrupt/partial localStorage
+// content the same way the rest of this file does for everything else.
+function sanitizeLinks(links) {
+  return links
+    .filter(l => l && typeof l === 'object')
+    .map(l => ({
+      id:    typeof l.id === 'string' && l.id ? l.id : `link_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      label: typeof l.label === 'string' ? l.label : '',
+      url:   typeof l.url   === 'string' ? l.url   : '',
+    }));
+}
+
+// Deep-merges a partial content object (images/colors/links/text) over DEFAULT_CONFIG,
 // so a partial/missing/corrupt package never leaves a field undefined.
 function mergeContent(partial) {
   return {
     images: { ...DEFAULT_CONFIG.images, ...partial?.images },
     colors: { ...DEFAULT_CONFIG.colors, ...partial?.colors },
+    links: Array.isArray(partial?.links) ? sanitizeLinks(partial.links) : structuredClone(DEFAULT_CONFIG.links),
     text: {
       ...DEFAULT_CONFIG.text,
       ...partial?.text,
@@ -229,14 +263,14 @@ export function createPackage(name, copyFromId = DEFAULT_PACKAGE_ID) {
     id,
     name: trimmed,
     isDefault: false,
-    ...structuredClone({ images: source.images, colors: source.colors, text: source.text }),
+    ...structuredClone({ images: source.images, colors: source.colors, links: source.links, text: source.text }),
   };
   store.packages[id] = pkg;
   writeStore(store);
   return pkg;
 }
 
-// Overwrites a non-system package's content (images/colors/text).
+// Overwrites a non-system package's content (images/colors/links/text).
 export function updatePackage(id, content) {
   if (isSystemId(id)) throw new Error('System packages are read-only.');
   const store = normalizeStore(readRaw());

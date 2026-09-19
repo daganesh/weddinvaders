@@ -58,8 +58,9 @@ Both `useGameState.js` and `renderer.js` read shared data/config from
 
 `useAssets.js` and `renderer.js` additionally read the customization config from
 `customizationStore.js` (`getActiveConfig()` / `DEFAULT_CONFIG`) — images, a small color palette,
-and a fixed set of wedding-text fields, backed by localStorage today behind an interface designed
-to be swapped for a real API/DB later without touching call sites. `images` holds `bride`/`groom`/
+a list of opening-page links, and a fixed set of wedding-text fields, backed by localStorage today
+behind an interface designed to be swapped for a real API/DB later without touching call sites.
+`images` holds `bride`/`groom`/
 `couple` portrait slots, a `banner` slot, plus one slot per `WEDDING_ITEMS` id (e.g. `rings`, `cake`)
 — an item slot left `null` falls back to that item's emoji in `renderer.js`, exactly like a null
 portrait slot falls back to the bundled PNG. `banner` is the odd one out: unlike every other image
@@ -109,6 +110,29 @@ page's bottom `.admin-actions` bar — so an error raised by an action taken *in
 state, since that renders into `.admin-actions` and would be invisible behind the modal. Show it
 with modal-local state instead (see the new-package modal's `modalError`) and keep the modal open
 on failure so the user can see the message and retry.
+
+### Opening-page links
+
+`links` (sibling to `images`/`colors`/`text` in a package's config) is a free-form array of
+`{ id, label, url }`, shown as a row of pill buttons below the canvas on the title screen only
+(`Game.jsx`'s `.title-links`, hidden entirely if every `url` is blank) — RSVP, gift registry, song
+requests, or anything else an admin adds (directions, wedding website, hotel block, dress code…).
+Unlike `images`/`colors` (fixed sets of named fields, merged key-by-key over `DEFAULT_CONFIG` so a
+partial/legacy package never leaves one `undefined`), `links` is admin-managed free-form content —
+`customizationStore.js`'s `mergeContent()` takes a package's own `links` array as-is (through
+`sanitizeLinks()`, which repairs missing/non-string fields rather than merging entry-by-entry) and
+only falls back to `DEFAULT_CONFIG.links` when the package has no `links` array at all (e.g. one
+saved before this feature existed). `DEFAULT_CONFIG.links` seeds exactly three entries — ids `rsvp`,
+`registry`, `songs` — each with an empty `url` (so a fresh package shows no links until an admin
+fills one in) and a display `label` the admin can freely rename. `id` is a stable identifier never
+shown in `AdminScreen.jsx`'s UI: today every entry (the three seeded ones and any the admin adds
+via "+ Add link") renders identically as a plain link, but keeping a stable, well-known id on the
+three seeded ones is what would let a future version single out *that specific* entry to upgrade
+into something richer (an embedded RSVP form, a live song-request list, a registry checklist)
+without having to guess which entry is which from a label the admin may have renamed — labels/order
+aren't reliable identity, ids are. An admin-added custom link gets a generated id and stays a plain
+link indefinitely. `Game.jsx` renders each visible link's `href` through `withProtocol()`, which
+prepends `https://` when the admin typed a bare domain (`example.com/rsvp`) instead of a full URL.
 
 ### Game Modes
 

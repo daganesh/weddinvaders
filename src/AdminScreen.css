@@ -131,6 +131,19 @@
   font-size: 13px;
 }
 
+.admin-link-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.admin-link-row input {
+  padding: 5px 7px;
+  font-size: 13px;
+}
+
 .admin-level-index {
   font-size: 12px;
   color: #999;
