@@ -8,6 +8,12 @@ import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './
 import defaultBannerSrc from './assets/banner-default.svg';
 import './Game.css';
 
+// An admin typing "example.com/rsvp" instead of "https://example.com/rsvp"
+// is a common slip that would otherwise resolve as a broken relative link.
+function withProtocol(url) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`;
+}
+
 export default function Game() {
   const canvasRef = useRef(null);
   const assetsRef = useAssets();
@@ -93,6 +99,9 @@ export default function Game() {
   const { brideColor, groomColor } = activeConfig.colors;
   const { bride: brideName, groom: groomName } = activeConfig.text.names;
   const bannerSrc = activeConfig.images.banner || defaultBannerSrc;
+  // Hidden individually while their URL is blank, so an admin can pre-seed
+  // the well-known RSVP/registry/songs slots without showing dead links.
+  const visibleLinks = activeConfig.links.filter(l => l.url.trim());
 
   const showControls = uiPhase !== 'title' && uiPhase !== 'modeSelect';
 
@@ -137,6 +146,22 @@ export default function Game() {
             </div>
           )}
         </div>
+
+        {uiPhase === 'title' && visibleLinks.length > 0 && (
+          <div className="title-links">
+            {visibleLinks.map(link => (
+              <a
+                key={link.id}
+                className="title-link"
+                href={withProtocol(link.url.trim())}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {link.label || 'Link'}
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* On-screen buttons (visible on touch devices) */}
         {showControls && uiMode === 'couple' && (

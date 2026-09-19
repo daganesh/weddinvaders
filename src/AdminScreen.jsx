@@ -145,6 +145,24 @@ export default function AdminScreen({ onExit }) {
     setDraft(c => ({ ...c, text: { ...c.text, familyLabels: { ...c.text.familyLabels, [role]: value } } }));
   }
 
+  function setLinkField(index, key, value) {
+    setDraft(c => ({
+      ...c,
+      links: c.links.map((link, i) => (i === index ? { ...link, [key]: value } : link)),
+    }));
+  }
+
+  function addLink() {
+    setDraft(c => ({
+      ...c,
+      links: [...c.links, { id: `link_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, label: '', url: '' }],
+    }));
+  }
+
+  function removeLink(index) {
+    setDraft(c => ({ ...c, links: c.links.filter((_, i) => i !== index) }));
+  }
+
   function setLevelField(index, key, value) {
     setDraft(c => {
       const levels = c.text.levels.map((lvl, i) => (i === index ? { ...lvl, [key]: value } : lvl));
@@ -281,6 +299,39 @@ export default function AdminScreen({ onExit }) {
               <button onClick={() => resetImage('banner')}>Reset to default</button>
             </div>
           </div>
+        </section>
+
+        <section>
+          <h2>Links</h2>
+          <p className="admin-hint">
+            Shown on the opening screen — hidden individually while their URL is blank. Add as many
+            as you like: RSVP, gift registry, song requests, directions, wedding website, hotel
+            block, dress code…
+          </p>
+          {draft.links.map((link, i) => (
+            <div className="admin-link-row" key={link.id}>
+              <input
+                className="admin-link-label"
+                value={link.label}
+                onChange={e => setLinkField(i, 'label', e.target.value)}
+                placeholder="Label (e.g. RSVP)"
+              />
+              <input
+                className="admin-link-url"
+                value={link.url}
+                onChange={e => setLinkField(i, 'url', e.target.value)}
+                placeholder="https://…"
+              />
+              <button
+                className="admin-icon-btn admin-icon-btn-danger"
+                title="Remove link"
+                onClick={() => removeLink(i)}
+              >
+                🗑️
+              </button>
+            </div>
+          ))}
+          <button onClick={addLink}>+ Add link</button>
         </section>
 
         <section>

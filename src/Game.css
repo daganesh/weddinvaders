@@ -125,6 +125,33 @@ body {
   justify-content: center;
 }
 
+.title-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  flex-shrink: 0; /* keeps its own size where a sibling (canvas-wrapper) is flex:1, see mobile query below */
+}
+
+.title-link,
+.title-link:visited {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffd700;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.title-link:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #ffd700;
+}
+
 .mobile-controls {
   display: none;
   width: 100%;
@@ -263,5 +290,10 @@ body {
 
   .game-banner {
     max-height: 44px; /* a slim strip — vertical space here is precious, see canvas-wrapper above */
+  }
+
+  .title-link {
+    font-size: 12px;
+    padding: 6px 12px;
   }
 }
