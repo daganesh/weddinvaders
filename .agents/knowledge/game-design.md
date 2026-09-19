@@ -6,7 +6,7 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 ## Game Phases
 | Phase | Description |
 |-------|-------------|
-| `title` | Start screen — explains controls + ammo types |
+| `title` | Start screen — wedding invitation notice (title, tagline, invitation text, opening-page links) plus controls + ammo types |
 | `modeSelect` | Choose Couple or Solo (and which character) before the first level — see "Game Modes" below |
 | `playing` | Main gameplay loop |
 | `meeting` | Players reached the same row → couple image shown, then level result |
@@ -104,19 +104,23 @@ plus any number of admin-created ones, exactly one of which is "active" (used by
 at a time. In scope per package: the bride/groom/couple images and a header banner image shown
 above the game on every screen (file upload → data URL, auto re-encoded to PNG with near-white
 background pixels faded to transparent), a small color palette (background gradient, accent,
-bride/groom fallback colors), and specific wedding text (title, tagline, win/lose messages, each
-level's name/subtitle, and the "Her Family"/"His Family" labels). The banner defaults to a bundled
-stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 80s Arcade system
-package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`. Also in
-scope: an admin-managed list of **opening-page links** (RSVP, gift registry, song requests, and
-anything else — directions, wedding website, hotel block…), shown as pill buttons below the canvas
-on the title screen only, hidden individually while blank. Both system packages seed all three with
-a real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
-opens in a new tab and explains it's a placeholder), so the feature is visible without any admin
-setup — an earlier version left them blank by default, which just made the feature invisible. Plain
-links today; see `architecture.md`'s "Opening-page links" for why each entry carries a stable id (so
-specific well-known ones could later become an embedded RSVP form, song-request list, or registry
-checklist instead of just a link).
+bride/groom fallback colors), and specific wedding text (title, tagline, an invitation message,
+win/lose messages, each level's name/subtitle, and the "Her Family"/"His Family" labels). The
+banner defaults to a bundled stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art
+version in the 80s Arcade system package) — see `architecture.md`'s "Packages" section and
+`game-jsx.md`'s `.game-banner`. The invitation message (`text.invitation`) is the actual
+wedding-invite copy — freeform, no placeholder substitution — shown as its own paragraph in the
+title screen's notice, between the tagline and the opening-page links described next; blank hides
+it. Also in scope: an admin-managed list of **opening-page links** (RSVP, gift registry, song
+requests, and anything else — directions, wedding website, hotel block…), shown as pill buttons
+both inside that same title-screen notice and again in a persistent footer below the canvas once
+the title screen is dismissed (hidden individually while blank). Both system packages seed all
+three with a real url out of the box, pointing at simple static demo pages bundled in
+`public/examples/` (each opens in a new tab and explains it's a placeholder), so the feature is
+visible without any admin setup — an earlier version left them blank by default, which just made
+the feature invisible. Plain links today; see `architecture.md`'s "Opening-page links" for why each
+entry carries a stable id (so specific well-known ones could later become an embedded RSVP form,
+song-request list, or registry checklist instead of just a link).
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads

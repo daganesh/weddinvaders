@@ -121,9 +121,13 @@ on failure so the user can see the message and retry.
 ### Opening-page links
 
 `links` (sibling to `images`/`colors`/`text` in a package's config) is a free-form array of
-`{ id, label, url }`, shown as a row of pill buttons below the canvas on the title screen only
-(`Game.jsx`'s `.title-links`, hidden entirely if every `url` is blank) — RSVP, gift registry, song
-requests, or anything else an admin adds (directions, wedding website, hotel block, dress code…).
+`{ id, label, url }` — RSVP, gift registry, song requests, or anything else an admin adds
+(directions, wedding website, hotel block, dress code…). Rendered as a row of pill buttons
+(`Game.jsx`'s `linksRow`, hidden entirely if every `url` is blank) in **two** places: inside the
+title screen's `.title-overlay` notice (alongside the new `text.invitation` wedding-invite copy —
+see below and `game-jsx.md`), and again in a persistent footer below the canvas that stays visible
+for the rest of the session (`{showControls && linksRow}`, gated on `uiPhase` being past
+`title`/`modeSelect`) — so the links aren't lost once the title screen is dismissed.
 Unlike `images`/`colors` (fixed sets of named fields, merged key-by-key over `DEFAULT_CONFIG` so a
 partial/legacy package never leaves one `undefined`), `links` is admin-managed free-form content —
 `customizationStore.js`'s `mergeContent()` takes a package's own `links` array as-is (through
