@@ -80,9 +80,9 @@ behind an interface designed to be swapped for a real API/DB later without touch
 — an item slot left `null` falls back to that item's emoji in `renderer.js`, exactly like a null
 portrait slot falls back to the bundled PNG. `banner` is the odd one out: unlike every other image
 slot, it's never drawn on the canvas or preloaded through `useAssets.js` — it's a plain DOM
-`<img className="game-banner">` rendered directly by `Game.jsx` above the toolbar (`activeConfig.
-images.banner || <bundled banner-default.svg>`), since it's a page header, not a game sprite. See
-`game-jsx.md`. `AdminScreen.jsx` is the only writer. Before an uploaded file reaches
+`<img className="game-banner">` rendered directly by `Game.jsx` in its header bar, alongside the
+hamburger menu (`activeConfig.images.banner || <bundled banner-default.svg>`), since it's a page
+header, not a game sprite. See `game-jsx.md`. `AdminScreen.jsx` is the only writer. Before an uploaded file reaches
 that config, `AdminScreen.jsx` runs it through `imageProcessing.js`'s `fileToImageDataUrl()`: an SVG
 upload passes through untouched (already vector, already transparent where needed, no pixel
 dimension to downscale); anything else goes through `fileToProcessedPngDataUrl()`, which downscales
@@ -131,13 +131,12 @@ on failure so the user can see the message and retry.
 `links` (sibling to `images`/`colors`/`text` in a package's config) is a free-form array of
 `{ id, label, url }` — RSVP, gift registry, song requests, or anything else an admin adds
 (directions, wedding website, hotel block, dress code…). Rendered as a row of pill buttons via the
-shared `LinksRow.jsx` component (hidden entirely if every `url` is blank) in **two** places:
-`InviteScreen.jsx`'s links row (alongside two more *computed* entries, Add to Calendar / Venue
-Maps — see "Invitation screen" below), and again in a persistent footer below the canvas in
-`Game.jsx` that stays visible for the rest of the session once Phase 2 (the game view) is showing
-(`{showControls && <LinksRow links={visibleLinks} />}`) — so the free-form links aren't lost once
-the invitation screen is dismissed. The two computed links are InviteScreen-only; the game-view
-footer only ever shows the admin's free-form `links` array.
+shared `LinksRow.jsx` component (hidden entirely if every `url` is blank), on `InviteScreen.jsx`
+only — alongside two more *computed* entries, Add to Calendar / Venue Maps (see "Invitation screen"
+below). `Game.jsx`'s game view (Phase 2) does **not** repeat this links row any more: an earlier
+version kept a persistent post-game footer, but that duplicated what the invitation screen already
+shows, so it was removed along with the old separate settings toolbar — see "Invitation screen"
+below for what replaced both.
 Unlike `images`/`colors` (fixed sets of named fields, merged key-by-key over `DEFAULT_CONFIG` so a
 partial/legacy package never leaves one `undefined`), `links` is admin-managed free-form content —
 `customizationStore.js`'s `mergeContent()` takes a package's own `links` array as-is (through
@@ -174,10 +173,21 @@ always opens in a new tab and never navigates the game away.
 described above, and a teaser banner reusing `text.title`/`text.tagline` with a "▶ START PLAYING"
 button) — and the `<canvas>` element isn't mounted at all, so it structurally can't receive touch
 input while someone is just reading the invite. Clicking "Start Playing" sets `showInvite` false,
-revealing the canvas/game view (Phase 2); a persistent "⬅ Back to Invite & Details" button sits
-*outside* `.canvas-wrapper` (a normal-flow sibling, never overlaid on the canvas) so it can always
-be clicked without any risk of the canvas's own click/touch handling swallowing the tap, and stays
-visible for the rest of the session once Phase 2 is showing.
+revealing the canvas/game view (Phase 2).
+
+Above both phases sits a single `.game-header-bar`: the banner image and a "☰" hamburger menu, side
+by side — nothing else. There's no separate settings toolbar and no persistent "Back to Invite"
+nav bar; instead, once Phase 2 is showing, the banner itself becomes the back-to-invite control (a
+`<button className="banner-link">` wrapping the `<img>`, calling the same handler) — clicking it
+returns to `InviteScreen`. It's non-interactive on the invitation screen itself, since that's
+already where it would go. The hamburger opens a small dropdown with two items: "⚙ Admin"
+(navigates `#/admin`, same route `AdminScreen.jsx` has always used) and "ℹ️ About" (opens a modal
+showing a fixed "Made with Weddin'Vaders" line plus, when set, an organizer credit — see below).
+Everything else that's actually *game* content — the board, the on-screen mobile/solo controls, and
+the keyboard-control legend — lives inside one bordered `.game-frame` card in `Game.jsx`, styled
+like `InviteScreen.css`'s own card for visual consistency between the two phases; a small
+"💌 Back to Invite & RSVP" nudge (`.end-of-level-banner`, described below) is the one thing that
+still sits outside that frame, appearing only at level boundaries.
 
 The canvas-drawn `title` phase (see `renderer.md`'s `drawTitle`) is skipped entirely — the first
 "Start Playing" click dispatches `handleAction({type:'START'})` directly (a synchronous ref
@@ -205,6 +215,11 @@ link entirely, and the generated Calendar event has no location). `eventLinks.js
 that builds the Google Calendar ("add event" render URL) and Google Maps (search URL) links from
 these — both are plain string templates, no date/URL library needed — plus `formatEventDateTime()`
 for the header's display string. See `invite-screen.md`.
+
+Two more `text` fields, `organizerName`/`organizerUrl` (both optional, default `''`), drive the
+About modal's organizer credit — a PR/marketing hook for the wedding-arranging company or venue
+running the game as a white-label product, distinct from the couple themselves. Both blank hides
+the line entirely; a name with no url renders as plain (non-link) text rather than a broken anchor.
 
 ### Game Modes
 

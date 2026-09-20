@@ -102,8 +102,9 @@ new `hourglass` is `2` (rare, same tier as family).
 
 ## Customization Layer
 An admin can override a small set of visuals/text — first step toward a white-label product for
-wedding-arranging companies. Reached via a `#/admin` hash route (a settings button on the
-invitation screen and the game view both link there); config is stored in `localStorage` behind
+wedding-arranging companies. Reached via a `#/admin` hash route, one item in a "☰" hamburger menu
+next to the banner (shown on both the invitation screen and the game view — there's no separate
+settings toolbar); config is stored in `localStorage` behind
 `src/customizationStore.js` as named **packages** (see `architecture.md`'s "Packages" section) — a
 permanent read-only `default` plus any number of admin-created ones, exactly one of which is
 "active" (used by the running game) at a time. In scope per package: the bride/groom/couple images
@@ -123,15 +124,23 @@ wedding date/time (`text.weddingDateTime`, a **required** date-time field) and v
 header and its two computed links, Add to Calendar and Venue Maps (see `invite-screen.md`'s
 `eventLinks.js`). Also in scope: an admin-managed list of **opening-page links** (RSVP, gift
 registry, song requests, and anything else — directions, wedding website, hotel block…), shown as
-pill buttons on the invitation screen (alongside the two computed links above) and again in a
-persistent footer below the canvas once the invitation screen is dismissed (hidden individually
-while blank). Both system packages seed the three well-known ones (RSVP/registry/songs) with a
-real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
+pill buttons on the invitation screen only (alongside the two computed links above) — hidden
+individually while blank. There's no repeat of these on the game view any more; an earlier version
+kept a persistent post-game footer, but it duplicated the invitation screen for no benefit and was
+removed along with the old standalone settings toolbar (see "Invitation screen" below and
+`architecture.md`). Both system packages seed the three well-known ones (RSVP/registry/songs) with
+a real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
 opens in a new tab and explains it's a placeholder), so the feature is visible without any admin
 setup — an earlier version left them blank by default, which just made the feature invisible.
 Plain links today; see `architecture.md`'s "Opening-page links" for why each entry carries a stable
 id (so specific well-known ones could later become an embedded RSVP form, song-request list, or
 registry checklist instead of just a link).
+
+Also in scope: an **organizer credit** (`text.organizerName`/`organizerUrl`, both optional) shown in
+the game view's "About" menu item (next to "Admin" in the same hamburger menu) — a PR/marketing hook
+for the wedding-arranging company or venue running the game, not the couple. Blank hides the credit
+line entirely.
+
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads
