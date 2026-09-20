@@ -102,6 +102,12 @@ export const DEFAULT_CONFIG = {
     // Blank hides the header's location line and the "Venue Maps" link
     // entirely, and the Calendar link is generated without a location.
     venueAddress: '',
+    // Shown in the in-game "About" menu — a PR/marketing hook for the
+    // wedding-arranging company or venue running this as a white-label
+    // product, not the couple themselves. Both blank hides the credit line
+    // entirely; a name with no url renders as plain (non-link) text.
+    organizerName: '',
+    organizerUrl: '',
     names: { bride: 'Bride', groom: 'Groom' },
     familyLabels: { bride: 'Her Family', groom: 'His Family' },
     // Parallel array to LEVELS in levels.js, indexed by array position.

@@ -44,14 +44,34 @@ body {
   flex-shrink: 0; /* keep its natural size even where a sibling is flex:1 */
 }
 
-.game-toolbar {
+/* Banner + hamburger menu, the only thing above the game frame/invite card
+   on either phase. The banner itself is the "back to invite" control once
+   Phase 2 is showing (see .banner-link) — there is no separate nav bar. */
+.game-header-bar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   max-width: 910px;
+  flex-shrink: 0;
 }
 
-.admin-btn {
+.banner-link {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.game-menu-anchor {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hamburger-btn {
   font-size: 18px;
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.08);
@@ -61,8 +81,103 @@ body {
   color: #ccc;
 }
 
-.admin-btn:hover {
+.hamburger-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+/* A full-viewport transparent layer behind the dropdown, same click-outside-
+   to-close pattern as AdminScreen.css's .admin-modal-overlay. */
+.game-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.game-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  background: rgba(10, 10, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 21;
+}
+
+.game-menu-dropdown button {
+  padding: 10px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.game-menu-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Everything game-related — board, side panel, on-screen controls, and the
+   control-legend text — lives inside this one bordered card; nothing else
+   does (the header bar above and the end-of-level nudge below are both
+   outside it). Same visual language as InviteScreen.css's .invite-screen. */
+.game-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.about-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.about-modal {
+  width: 90%;
+  max-width: 340px;
+  padding: 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #14142a;
+  color: #eee;
+  text-align: center;
+}
+
+.about-modal h3 {
+  margin-bottom: 12px;
+}
+
+.about-organizer-link {
+  display: inline-block;
+  color: #ffd700;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.about-close {
+  margin-top: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
 }
 
 .canvas-wrapper {
@@ -115,15 +230,6 @@ body {
   border-color: #ffd700;
 }
 
-/* Fixed above the canvas whenever the game view (Phase 2) is showing — a
-   normal-flow sibling of .canvas-wrapper, never overlaid on it, so it can't
-   be swallowed by the canvas's own click/touch handling and never needs the
-   pointer-events passthrough trick the overlays above do. */
-.game-nav-bar {
-  display: flex;
-  width: 100%;
-}
-
 .back-to-invite-btn {
   font-size: 14px;
   font-weight: bold;
@@ -142,11 +248,13 @@ body {
 /* Every level boundary (a level win, the full-game win, or a loss) nudges
    the player back toward the invite/RSVP — winning the whole game takes
    several level clears, so most runs will hit this well before gameComplete.
-   A plain block below the canvas, same reasoning as .game-nav-bar above. */
+   A plain block below .game-frame, not overlaid on the canvas, so it never
+   competes with the canvas's own click-to-continue. */
 .end-of-level-banner {
   display: flex;
   justify-content: center;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .key-legend {
@@ -296,9 +404,10 @@ body {
    picks a taller/narrower logical resolution for exactly this case). Here we
    let the canvas actually use that extra height instead of just centering a
    short landscape-shaped box in a sea of empty space: the container is
-   pinned to the viewport height, and the canvas becomes a flexible middle
-   section — small toolbar above, small controls strip below — sized to fill
-   whatever's left. */
+   pinned to the viewport height, and .game-frame becomes a flexible section
+   — small header bar above, small end-of-level banner below (when present)
+   — sized to fill whatever's left, with the canvas itself filling whatever
+   .game-frame's own controls/legend leave over in turn. */
 @media (max-width: 640px) and (orientation: portrait) {
   .game-wrapper {
     padding: 8px;
@@ -318,10 +427,21 @@ body {
     gap: 8px;
   }
 
+  /* .game-frame (not .canvas-wrapper directly) is now the flexible item
+     under .game-container.is-playing, since the frame also holds the
+     on-screen controls/key-legend below the board — 0 basis (not auto) so
+     it actually shrinks to the space left over by the header bar and the
+     end-of-level banner, instead of sizing from its content's preferred
+     height. */
+  .game-frame {
+    flex: 1 1 0;
+    min-height: 0;
+    gap: 8px;
+    padding: 8px;
+  }
+
   .canvas-wrapper {
-    flex: 1 1 0; /* 0 basis (not auto) so this item actually shrinks to the
-                    space left over by its siblings, instead of sizing from
-                    the canvas's own preferred (aspect-ratio-driven) height */
+    flex: 1 1 auto; /* grows to fill whatever .game-frame's controls/legend leave over */
     min-height: 0; /* let a flex child shrink below its content size */
     overflow: hidden;
   }

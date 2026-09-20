@@ -451,6 +451,30 @@ export default function AdminScreen({ onExit }) {
             </div>
           ))}
         </section>
+
+        <section>
+          <h2>About / Organizer Credit</h2>
+          <p className="admin-hint">
+            Shown in the game's "About" menu — a PR opportunity for the wedding-arranging company
+            or venue running this game, not the couple. Leave both blank to hide it entirely.
+          </p>
+          <label className="admin-text-row">
+            Organizer name
+            <input
+              value={draft.text.organizerName}
+              onChange={e => setTextField('organizerName', e.target.value)}
+              placeholder="e.g. Sunset Events Co."
+            />
+          </label>
+          <label className="admin-text-row">
+            Organizer link (optional)
+            <input
+              value={draft.text.organizerUrl}
+              onChange={e => setTextField('organizerUrl', e.target.value)}
+              placeholder="https://…"
+            />
+          </label>
+        </section>
       </fieldset>
 
       <div className="admin-actions">
