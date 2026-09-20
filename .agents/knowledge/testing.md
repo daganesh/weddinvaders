@@ -13,9 +13,13 @@ npm run dev
 
 ### Manual test checklist (run after any change)
 1. **Invitation screen** — loads without errors (no canvas mounted yet); couple names/date/links/
-   teaser visible; "Start Playing" reveals the canvas and jumps straight to mode-select (no title
-   screen in between). "⬅ Back to Invite & Details" (visible once past mode-select) returns to the
-   invitation screen without losing an in-progress run; "Start Playing" again resumes it.
+   teaser visible; "Start Playing" reveals the canvas inside a bordered game frame and jumps
+   straight to mode-select (no title screen in between). Clicking the banner (now the only
+   back-to-invite control above the frame) returns to the invitation screen without losing an
+   in-progress run; "Start Playing" again resumes it. The "☰" menu next to the banner (present on
+   both screens) opens Admin (`#/admin`) and About (a modal with a fixed credit line, plus an
+   organizer link/name when set in Admin's "About / Organizer Credit" section) — verify the About
+   modal closes via its Close button and via clicking outside it.
 2. **Player movement** — Groom: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot. Bride: A/D move, W shoot, S cycle ammo.
 3. **Ammo types** — 💵 cash reduces item HP; 💌 invite targets guest items; 💕 heart targets family items.
 4. **Item acquisition** — shoot item to 0 HP → popup message, item added to acquired list, side panel checkmark updates.
