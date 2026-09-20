@@ -4,9 +4,14 @@
 Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **Groom** (top) move toward each other across 9 rows, shooting flying wedding items to buy everything needed for their wedding before they meet in the middle.
 
 ## Game Phases
+Before any of these, the app shows `InviteScreen.jsx` — a separate pre-game DOM screen (couple
+names/date/venue, the invitation copy, links, and a "Start Playing" CTA), not part of this phase
+machine at all. Its "Start Playing" button skips the canvas `title` phase entirely, going straight
+to `modeSelect` (see `architecture.md`'s "Invitation screen (Phase 1) vs. game view (Phase 2)").
+
 | Phase | Description |
 |-------|-------------|
-| `title` | Start screen — wedding invitation notice (title, tagline, invitation text, opening-page links) plus controls + ammo types |
+| `title` | The game's initial internal phase — no canvas screen is ever shown for it in normal play (superseded by `InviteScreen.jsx`); kept as `useGameState.js`'s starting state and `renderer.js`'s dispatch-table default. |
 | `modeSelect` | Choose Couple or Solo (and which character) before the first level — see "Game Modes" below |
 | `playing` | Main gameplay loop |
 | `meeting` | Players reached the same row → couple image shown, then level result |
@@ -97,30 +102,36 @@ new `hourglass` is `2` (rare, same tier as family).
 
 ## Customization Layer
 An admin can override a small set of visuals/text — first step toward a white-label product for
-wedding-arranging companies. Reached via a `#/admin` hash route (a settings button on the title
-screen links there); config is stored in `localStorage` behind `src/customizationStore.js` as
-named **packages** (see `architecture.md`'s "Packages" section) — a permanent read-only `default`
-plus any number of admin-created ones, exactly one of which is "active" (used by the running game)
-at a time. In scope per package: the bride/groom/couple images and a header banner image shown
-above the game on every screen (file upload → data URL, auto re-encoded to PNG with near-white
-background pixels faded to transparent), a small color palette (background gradient, accent,
-bride/groom fallback colors), and specific wedding text (title, tagline, an invitation message,
-win/lose messages, each level's name/subtitle, and the "Her Family"/"His Family" labels). The
-banner defaults to a bundled stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art
-version in the 80s Arcade system package) — see `architecture.md`'s "Packages" section and
-`game-jsx.md`'s `.game-banner`. The invitation message (`text.invitation`) is the actual
-wedding-invite copy — freeform, no placeholder substitution — shown as its own paragraph in the
-title screen's notice, between the tagline and the opening-page links described next; blank hides
-it. Also in scope: an admin-managed list of **opening-page links** (RSVP, gift registry, song
-requests, and anything else — directions, wedding website, hotel block…), shown as pill buttons
-both inside that same title-screen notice and again in a persistent footer below the canvas once
-the title screen is dismissed (hidden individually while blank). Both system packages seed all
-three with a real url out of the box, pointing at simple static demo pages bundled in
-`public/examples/` (each opens in a new tab and explains it's a placeholder), so the feature is
-visible without any admin setup — an earlier version left them blank by default, which just made
-the feature invisible. Plain links today; see `architecture.md`'s "Opening-page links" for why each
-entry carries a stable id (so specific well-known ones could later become an embedded RSVP form,
-song-request list, or registry checklist instead of just a link).
+wedding-arranging companies. Reached via a `#/admin` hash route (a settings button on the
+invitation screen and the game view both link there); config is stored in `localStorage` behind
+`src/customizationStore.js` as named **packages** (see `architecture.md`'s "Packages" section) — a
+permanent read-only `default` plus any number of admin-created ones, exactly one of which is
+"active" (used by the running game) at a time. In scope per package: the bride/groom/couple images
+and a header banner image shown above the game on every screen (file upload → data URL, auto
+re-encoded to PNG with near-white background pixels faded to transparent), a small color palette
+(background gradient, accent, bride/groom fallback colors), and specific wedding text (title,
+tagline, an invitation message, the wedding date/time and venue address, win/lose messages, each
+level's name/subtitle, and the "Her Family"/"His Family" labels). The banner defaults to a bundled
+stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 80s Arcade system
+package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`.
+
+The invitation message (`text.invitation`) is the actual wedding-invite copy — freeform, no
+placeholder substitution — shown as its own paragraph on the invitation screen (`InviteScreen.jsx`,
+Phase 1 of the app, shown before the game itself — see `architecture.md`); blank hides it. The
+wedding date/time (`text.weddingDateTime`, a **required** date-time field) and venue address
+(`text.venueAddress`, optional — blank omits the venue everywhere) drive that same screen's
+header and its two computed links, Add to Calendar and Venue Maps (see `invite-screen.md`'s
+`eventLinks.js`). Also in scope: an admin-managed list of **opening-page links** (RSVP, gift
+registry, song requests, and anything else — directions, wedding website, hotel block…), shown as
+pill buttons on the invitation screen (alongside the two computed links above) and again in a
+persistent footer below the canvas once the invitation screen is dismissed (hidden individually
+while blank). Both system packages seed the three well-known ones (RSVP/registry/songs) with a
+real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
+opens in a new tab and explains it's a placeholder), so the feature is visible without any admin
+setup — an earlier version left them blank by default, which just made the feature invisible.
+Plain links today; see `architecture.md`'s "Opening-page links" for why each entry carries a stable
+id (so specific well-known ones could later become an embedded RSVP form, song-request list, or
+registry checklist instead of just a link).
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —
 see `use-game-state.md`). See `renderer.md` and `architecture.md` for how the config threads

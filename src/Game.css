@@ -115,82 +115,38 @@ body {
   border-color: #ffd700;
 }
 
-/* The title screen's whole "notice" — game title, tagline, wedding invite
-   text, opening-page links, and control instructions — lives here as real
-   HTML (see renderer.js's drawTitle, which now only paints the starfield
-   background behind it) rather than canvas-drawn text, since the
-   admin-customizable invitation copy is arbitrary-length and needs to wrap
-   like normal text, and the links need to be real anchors regardless.
-   `pointer-events: none` on the container (re-enabled only on the links)
-   lets a click anywhere else on the title screen still reach the canvas
-   underneath and start the game, exactly like .mode-select-overlay above. */
-.title-overlay {
-  position: absolute;
-  inset: 0;
+/* Fixed above the canvas whenever the game view (Phase 2) is showing — a
+   normal-flow sibling of .canvas-wrapper, never overlaid on it, so it can't
+   be swallowed by the canvas's own click/touch handling and never needs the
+   pointer-events passthrough trick the overlays above do. */
+.game-nav-bar {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 5% 6% 4%;
-  overflow-y: auto;
-  pointer-events: none;
-  text-align: center;
-  line-height: normal; /* .canvas-wrapper sets line-height: 0 (to avoid baseline
-                           gap under the canvas), which would otherwise inherit
-                           here and collapse/overlap every line of text */
+  width: 100%;
 }
 
-.title-overlay .title-link {
-  pointer-events: auto;
-}
-
-.title-heading {
-  font-size: clamp(26px, 6vw, 44px);
+.back-to-invite-btn {
+  font-size: 14px;
   font-weight: bold;
-  font-family: monospace;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  text-shadow: 0 0 20px var(--wv-accent-color, #ffd700);
-  margin: 0;
+  cursor: pointer;
 }
 
-.title-tagline {
-  font-size: clamp(13px, 2.4vw, 17px);
-  color: var(--wv-accent-color, #ffd700);
-  margin: 0;
+.back-to-invite-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
-.title-invitation {
-  max-width: 520px;
-  font-size: clamp(12px, 2.1vw, 14px);
-  line-height: 1.5;
-  color: #e8ecff;
-  margin: 2px 0;
-}
-
-.title-instructions {
+/* Every level boundary (a level win, the full-game win, or a loss) nudges
+   the player back toward the invite/RSVP — winning the whole game takes
+   several level clears, so most runs will hit this well before gameComplete.
+   A plain block below the canvas, same reasoning as .game-nav-bar above. */
+.end-of-level-banner {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.title-instructions p {
-  margin: 0;
-  font-size: clamp(11px, 1.9vw, 14px);
-  color: #ccc;
-}
-
-.title-instructions .title-tip {
-  color: #999;
-}
-
-.title-prompt {
-  margin: 4px 0 0;
-  font-weight: bold;
-  font-size: clamp(13px, 2.3vw, 16px);
-  color: var(--wv-accent-color, #ffd700);
-  text-shadow: 0 0 8px var(--wv-accent-color, #ffd700);
+  justify-content: center;
+  width: 100%;
 }
 
 .key-legend {
@@ -349,7 +305,11 @@ body {
     align-items: stretch;
   }
 
-  .game-container {
+  /* Scoped to .is-playing (Phase 2, added in Game.jsx once the invite screen
+     is dismissed) rather than plain .game-container — the invitation screen
+     is normal scrollable content and should size to fit it, not get pinned
+     to the viewport height with empty space left over below a short card. */
+  .game-container.is-playing {
     /* .game-wrapper's 8px top+bottom padding sits outside this box, so its
        full-viewport height needs to subtract that or the layout runs 16px
        past the bottom of the screen. */
@@ -373,10 +333,5 @@ body {
   .title-link {
     font-size: 12px;
     padding: 6px 12px;
-  }
-
-  .title-overlay {
-    gap: 6px;
-    padding: 4% 5% 3%;
   }
 }

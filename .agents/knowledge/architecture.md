@@ -22,6 +22,11 @@ src/
 ├── customizationStore.js  # localStorage-backed customization config (images/colors/text) + DEFAULT_CONFIG + EIGHTIES_CONFIG — the only module that touches localStorage
 ├── useCustomization.js    # Ref-based hook wrapping customizationStore.getConfig()
 ├── imageProcessing.js     # fileToImageDataUrl() — SVG uploads pass through as-is; fileToProcessedPngDataUrl() downscales + re-encodes raster uploads to PNG, fades near-white pixels to transparent
+├── InviteScreen.jsx  # Phase 1: the pre-game "digital wedding card" DOM screen — see "Invitation screen" below
+├── InviteScreen.css
+├── eventLinks.js     # Pure helpers: builds the Google Calendar / Venue Maps links + formats the header date from text.weddingDateTime/venueAddress
+├── linkUtils.js       # withProtocol() — shared by Game.jsx and InviteScreen.jsx
+├── LinksRow.jsx       # Shared pill-link row component — renders a package's opening-page links (used by both Game.jsx and InviteScreen.jsx)
 ├── AdminScreen.jsx   # Admin UI (reached via #/admin hash route) for editing the customization config
 ├── AdminScreen.css
 └── assets/
@@ -47,13 +52,16 @@ no router dependency, since this is currently the only extra screen.
 ## Data Flow
 ```
 Game.jsx                          → knowledge/game-jsx.md
-  ├── useGameState()  →  stateRef (never React state — avoids re-renders)
+  ├── showInvite  ←  React state, true by default (Phase 1: InviteScreen.jsx)
+  │                  false once "Start Playing" is clicked (Phase 2: this canvas)
+  ├── useGameState(!showInvite)  →  stateRef (never React state — avoids re-renders)
   │                                → knowledge/use-game-state.md
   ├── useAssets()     →  assetsRef
   ├── uiPhase/uiMode/uiSoloRole  ←  lightweight React-state mirrors, updated
   │                                 only on phase change (drive mode-select
   │                                 overlay + couple/solo control swap)
-  └── requestAnimationFrame loop:
+  └── requestAnimationFrame loop (started/stopped with showInvite, so
+      leaving/returning to the invite screen pauses/resumes a run):
         update(stateRef)   ← pure mutation via setState(updater)
         render(ctx, state, assets, config)
                                    → knowledge/renderer.md
@@ -122,12 +130,14 @@ on failure so the user can see the message and retry.
 
 `links` (sibling to `images`/`colors`/`text` in a package's config) is a free-form array of
 `{ id, label, url }` — RSVP, gift registry, song requests, or anything else an admin adds
-(directions, wedding website, hotel block, dress code…). Rendered as a row of pill buttons
-(`Game.jsx`'s `linksRow`, hidden entirely if every `url` is blank) in **two** places: inside the
-title screen's `.title-overlay` notice (alongside the new `text.invitation` wedding-invite copy —
-see below and `game-jsx.md`), and again in a persistent footer below the canvas that stays visible
-for the rest of the session (`{showControls && linksRow}`, gated on `uiPhase` being past
-`title`/`modeSelect`) — so the links aren't lost once the title screen is dismissed.
+(directions, wedding website, hotel block, dress code…). Rendered as a row of pill buttons via the
+shared `LinksRow.jsx` component (hidden entirely if every `url` is blank) in **two** places:
+`InviteScreen.jsx`'s links row (alongside two more *computed* entries, Add to Calendar / Venue
+Maps — see "Invitation screen" below), and again in a persistent footer below the canvas in
+`Game.jsx` that stays visible for the rest of the session once Phase 2 (the game view) is showing
+(`{showControls && <LinksRow links={visibleLinks} />}`) — so the free-form links aren't lost once
+the invitation screen is dismissed. The two computed links are InviteScreen-only; the game-view
+footer only ever shows the admin's free-form `links` array.
 Unlike `images`/`colors` (fixed sets of named fields, merged key-by-key over `DEFAULT_CONFIG` so a
 partial/legacy package never leaves one `undefined`), `links` is admin-managed free-form content —
 `customizationStore.js`'s `mergeContent()` takes a package's own `links` array as-is (through
@@ -140,21 +150,61 @@ earlier version shipped these with a blank `url` (hidden entirely, per the "hide
 below) on the theory that a dead placeholder link was worse than no link — in practice that just
 made the whole feature look broken/invisible out of the box, since the *only* built-in packages are
 these two read-only system ones and neither ever showed anything. Real demo pages fix that: the
-Default/80s title screens now show all three links immediately, each opening its own simple styled
-page (in a new tab) explaining it's a placeholder and naming where to swap in the couple's real
-RSVP form / registry / playlist link. An admin can still set any `url` back to empty to hide a link
-individually. `id` is a stable identifier never shown in `AdminScreen.jsx`'s UI: today every entry
-(the three seeded ones and any the admin adds via "+ Add link") renders identically as a plain link,
-but keeping a stable, well-known id on the three seeded ones is what would let a future version
-single out *that specific* entry to upgrade into something richer (an embedded RSVP form, a live
-song-request list, a registry checklist) without having to guess which entry is which from a label
-the admin may have renamed — labels/order aren't reliable identity, ids are. An admin-added custom
-link gets a generated id and stays a plain link indefinitely. `Game.jsx` renders each visible link's
-`href` through `withProtocol()`, which prepends `https://` when the admin typed a bare domain
-(`example.com/rsvp`) instead of a full URL, but leaves a site-relative path (like the bundled
-examples' `/weddinvaders/examples/...` urls) untouched. Every link opens via
+Default/80s invitation screens now show all three links immediately, each opening its own simple
+styled page (in a new tab) explaining it's a placeholder and naming where to swap in the couple's
+real RSVP form / registry / playlist link. An admin can still set any `url` back to empty to hide a
+link individually. `id` is a stable identifier never shown in `AdminScreen.jsx`'s UI: today every
+entry (the three seeded ones and any the admin adds via "+ Add link") renders identically as a
+plain link, but keeping a stable, well-known id on the three seeded ones is what would let a future
+version single out *that specific* entry to upgrade into something richer (an embedded RSVP form, a
+live song-request list, a registry checklist) without having to guess which entry is which from a
+label the admin may have renamed — labels/order aren't reliable identity, ids are. An admin-added
+custom link gets a generated id and stays a plain link indefinitely. `LinksRow.jsx` renders each
+visible link's `href` through `linkUtils.js`'s `withProtocol()`, which prepends `https://` when the
+admin typed a bare domain (`example.com/rsvp`) instead of a full URL, but leaves a site-relative
+path (like the bundled examples' `/weddinvaders/examples/...` urls) untouched. Every link opens via
 `target="_blank" rel="noopener noreferrer"` — a real anchor, not a canvas click handler — so it
 always opens in a new tab and never navigates the game away.
+
+### Invitation screen (Phase 1) vs. game view (Phase 2)
+
+`Game.jsx` owns one more piece of UI state beyond the game's own phase machine: `showInvite`
+(`true` by default). While true, `InviteScreen.jsx` renders instead of the canvas — a plain DOM
+"digital wedding card" (couple names, wedding date/time, venue, the invitation copy, the links row
+described above, and a teaser banner reusing `text.title`/`text.tagline` with a "▶ START PLAYING"
+button) — and the `<canvas>` element isn't mounted at all, so it structurally can't receive touch
+input while someone is just reading the invite. Clicking "Start Playing" sets `showInvite` false,
+revealing the canvas/game view (Phase 2); a persistent "⬅ Back to Invite & Details" button sits
+*outside* `.canvas-wrapper` (a normal-flow sibling, never overlaid on the canvas) so it can always
+be clicked without any risk of the canvas's own click/touch handling swallowing the tap, and stays
+visible for the rest of the session once Phase 2 is showing.
+
+The canvas-drawn `title` phase (see `renderer.md`'s `drawTitle`) is skipped entirely — the first
+"Start Playing" click dispatches `handleAction({type:'START'})` directly (a synchronous ref
+mutation, so it lands before the canvas ever renders a frame), taking the game straight to
+`modeSelect`. `useGameState.js`'s `active` parameter (`Game.jsx` passes `!showInvite`) gates the
+keyboard-input effect for the same reason the loop is stopped/started with `showInvite` (see the
+Data Flow diagram above): without it, a stray keypress while browsing the invitation screen could
+silently advance a paused `meeting`/`levelComplete` screen or reset a finished game in the
+background, since that listener is otherwise always mounted at the `window` level regardless of
+what's currently visible.
+
+"Back to Invite" pauses rather than resets: `stopLoop()` freezes `update()` (and therefore every
+per-frame timer) mid-run, and `startLoop()` on the next "Start Playing" click picks up exactly
+where it left off — `handleStartPlaying` only dispatches `START` when `phase === 'title'` (i.e. the
+very first time), so a returning player doesn't get bounced back to mode-select. A small
+"💌 Back to Invite & RSVP" banner (`Game.jsx`'s `.end-of-level-banner`) also appears on every level
+boundary — a level win (`meeting`), the full-game win (`gameComplete`), a level loss (`lost`), or
+time-out (`levelComplete`) — not just the final victory, since clearing all 5 levels takes several
+wins and most runs will end at an earlier boundary.
+
+Two new `text` fields drive the header/computed links: `weddingDateTime` (a `datetime-local` value,
+**required** — `AdminScreen.jsx` blocks Save without one, since the Calendar link has no sensible
+fallback) and `venueAddress` (optional — blank hides the header's location line and the Venue Maps
+link entirely, and the generated Calendar event has no location). `eventLinks.js` is the only place
+that builds the Google Calendar ("add event" render URL) and Google Maps (search URL) links from
+these — both are plain string templates, no date/URL library needed — plus `formatEventDateTime()`
+for the header's display string. See `invite-screen.md`.
 
 ### Game Modes
 
@@ -199,4 +249,5 @@ solo-only mobile control surface.
 | [`knowledge/use-game-state.md`](use-game-state.md) | `useGameState()` hook in `src/useGameState.js` — core game logic, input, update loop |
 | [`knowledge/renderer.md`](renderer.md) | `render()` and draw functions in `src/renderer.js` — all canvas drawing |
 | [`knowledge/game-jsx.md`](game-jsx.md) | `Game` component in `src/Game.jsx` — React shell wiring hooks + canvas + controls |
+| [`knowledge/invite-screen.md`](invite-screen.md) | `InviteScreen` component in `src/InviteScreen.jsx` — Phase 1 pre-game DOM screen |
 | [`knowledge/constants.md`](constants.md) | `src/constants.js` — shared dimensions, timing, `WEDDING_ITEMS`, `AMMO_META` schema |

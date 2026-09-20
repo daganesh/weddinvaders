@@ -175,6 +175,10 @@ export default function AdminScreen({ onExit }) {
   }
 
   function handleSave() {
+    if (!draft.text.weddingDateTime) {
+      flashStatus('Wedding date & time is required before saving.');
+      return;
+    }
     updatePackage(selectedId, draft);
     onExit();
   }
@@ -383,6 +387,27 @@ export default function AdminScreen({ onExit }) {
             Tagline
             <input value={draft.text.tagline} onChange={e => setTextField('tagline', e.target.value)} />
           </label>
+          <label className="admin-text-row">
+            Wedding date &amp; time *
+            <input
+              type="datetime-local"
+              value={draft.text.weddingDateTime}
+              onChange={e => setTextField('weddingDateTime', e.target.value)}
+              required
+            />
+          </label>
+          <label className="admin-text-row">
+            Venue address (optional)
+            <input
+              value={draft.text.venueAddress}
+              onChange={e => setTextField('venueAddress', e.target.value)}
+              placeholder="Leave blank if the venue isn't set/disclosed yet"
+            />
+          </label>
+          <p className="admin-hint">
+            The date/time and address drive the invitation screen's header and its "Add to
+            Calendar" / "Venue Maps" links — no separate fields for those.
+          </p>
           <label className="admin-text-row admin-text-row-wide">
             Invitation text
             <textarea

@@ -13,8 +13,15 @@ produces.
 ## Construction
 Called once per mount from `Game.jsx` (see [`game-jsx.md`](game-jsx.md)):
 ```js
-const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState();
+const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState(active);
 ```
+`active` (default `true`) gates the keyboard-input effect — `Game.jsx` passes `!showInvite`, false
+while the invitation screen (not the canvas) is showing. Without this, the keydown listener (which
+is always mounted at the `window` level, independent of whether the canvas is visible) could
+silently advance a paused `meeting`/`levelComplete` screen or reset a finished game from a stray
+keypress while the player is just reading the invitation card — see `game-jsx.md`'s "Back to
+Invite" pause/resume, which stops/starts the render loop for the equivalent per-frame case.
+
 Internally, state lives in `stateRef` (a `useRef`, not `useState` — see architecture.md's "Key
 Design Decisions") seeded by `getInitialState(levelIndex = 0, mode = 'couple', soloRole = null)`
 (`useGameState.js:107`).
@@ -37,7 +44,7 @@ rendering-side equivalent (`isTop` passed to `drawPlayer`).
 |---|---|---|
 | `getInitialState(levelIndex, mode, soloRole)` | 107 | Builds a fresh state object for a given level/mode (money, ammo, players, timers, `slowTimer`, `topRole`/`bottomRole`). Authoritative shape — a field missing here becomes `undefined` after a level restart. |
 | `useGameState()` | 142 | The hook itself; returns `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }`. |
-| `onKey(e)` (internal, in the hook's keyboard effect) | 203 | Routes `keydown`/`keyup`. Non-`playing` phases advance on any key (title → `modeSelect`); while `playing`, dispatches shoot/cycle-ammo **only for the controllable role(s)** — in solo mode the waiting role's keys are ignored via `brideControllable`/`groomControllable` checks. |
+| `onKey(e)` (internal, in the hook's keyboard effect) | 203 | Bails immediately if `active` is false. Otherwise routes `keydown`/`keyup`: several non-`playing` phases advance on any key (`meeting`/`levelComplete`/`gameComplete`/`lost` → next level, replay, etc. — `gameComplete`'s replay lands on `modeSelect`, not `title`, since the canvas title screen no longer exists); while `playing`, dispatches shoot/cycle-ammo **only for the controllable role(s)** — in solo mode the waiting role's keys are ignored via `brideControllable`/`groomControllable` checks. There is no `title`-phase branch here any more — `Game.jsx`'s `handleStartPlaying` dispatches `handleAction({type:'START'})` directly instead of waiting for a keypress. |
 | `shoot(role)` | 165 | Validates ammo/money and that `role` is controllable in the current mode, deducts cost, spawns a bullet — direction (`vy`, spawn `y`) is based on `role === s.topRole`, not the role identity, so solo-as-groom (now in the bottom slot) shoots upward correctly. Called for both keyboard shortcuts and `handleAction({type:'SHOOT'})`. |
 | `update()` | 287 | Runs every animation frame: row advance (rate-adjusted, see below, using `topRole`/`bottomRole`), player movement (`moveX`, gated per-role by controllability), bullet travel, item spawn/movement (capped at `MAX_CONCURRENT_ITEMS` on screen at once — 8 desktop / 5 mobile portrait, see `constants.md`), escaped-item life loss, **bullet↔item collision** (inline, not a separate function), win/lose phase transition. |
 | `loop()` / `startLoop()` / `stopLoop()` | ~496–510 | `requestAnimationFrame` driver; calls `update()` then the render callback registered via `setRenderCallback`. |

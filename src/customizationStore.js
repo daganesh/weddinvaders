@@ -89,6 +89,19 @@ export const DEFAULT_CONFIG = {
       + 'the registry, and send in your song requests below.',
     winMessage: "🎉 YOU'RE MARRIED! 🎉",
     loseMessage: '💔 Wedding Failed!',
+    // The invitation screen's header date/time and the "Add to Calendar" link
+    // (see eventLinks.js) are both built from this one field, so it's a real
+    // datetime (an admin picks it with a native date-time control), not a
+    // freeform display string — required, since the calendar link has no
+    // sensible fallback without it. Deliberately no separate "venue name"
+    // field beyond the address below; keeping the address as the single
+    // source for both the header's location line and the Maps/Calendar links
+    // avoids the two ever disagreeing.
+    weddingDateTime: '2027-06-19T16:00',
+    // Optional — a couple may not want to disclose the venue yet (or ever).
+    // Blank hides the header's location line and the "Venue Maps" link
+    // entirely, and the Calendar link is generated without a location.
+    venueAddress: '',
     names: { bride: 'Bride', groom: 'Groom' },
     familyLabels: { bride: 'Her Family', groom: 'His Family' },
     // Parallel array to LEVELS in levels.js, indexed by array position.

@@ -139,7 +139,14 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
 
 // ── hook ───────────────────────────────────────────────────────────────────
 
-export function useGameState() {
+// `active` gates keyboard handling — false while the invitation screen (not
+// the canvas) is showing, so a stray keypress there can't silently advance a
+// paused meeting/levelComplete screen or reset a finished game in the
+// background. The render loop itself is separately started/stopped by the
+// caller (see Game.jsx) for the same reason; this only covers the keydown
+// listener, which stays mounted regardless so its closures see the latest
+// `active` value without extra plumbing.
+export function useGameState(active = true) {
   const stateRef          = useRef(getInitialState());
   const keysRef           = useRef(new Set());
   const rafRef            = useRef(null);
@@ -201,15 +208,12 @@ export function useGameState() {
     const scrollKeys = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space']);
 
     const onKey = (e) => {
+      if (!active) return;
       if (scrollKeys.has(e.code)) e.preventDefault();
       if (e.type === 'keydown') keysRef.current.add(e.code);
       if (e.type === 'keyup')   keysRef.current.delete(e.code);
 
       const s = getState();
-
-      if (s.phase === 'title' && e.type === 'keydown') {
-        setState(s => ({ ...s, phase: 'modeSelect' })); return;
-      }
 
       // Meeting scene: any key advances once the couple image has appeared (>= 80 frames)
       if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 80) {
@@ -227,7 +231,10 @@ export function useGameState() {
         setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' }); return;
       }
       if (s.phase === 'gameComplete' && e.type === 'keydown') {
-        setState({ ...getInitialState(0), phase: 'title' }); return;
+        // Not phase: 'title' — the canvas title screen no longer exists
+        // (InviteScreen.jsx is the pre-game screen now), so a full replay
+        // goes straight to mode-select instead of a screen nothing renders.
+        setState({ ...getInitialState(0), phase: 'modeSelect' }); return;
       }
       if (s.phase === 'lost' && e.code === 'KeyR' && e.type === 'keydown') {
         setState({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' }); return;
@@ -280,7 +287,7 @@ export function useGameState() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('keyup',   onKey);
     };
-  }, [cycleAmmoFor, shoot]);
+  }, [active, cycleAmmoFor, shoot]);
 
   // ── main update (runs every frame) ────────────────────────────────────
 
