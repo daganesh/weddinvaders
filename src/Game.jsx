@@ -165,6 +165,12 @@ export default function Game() {
               <>
                 <div className="game-menu-backdrop" onClick={() => setMenuOpen(false)} />
                 <div className="game-menu-dropdown">
+                  <button onClick={() => { setMenuOpen(false); handleBackToInvite(); }}>
+                    🏠 Invitation
+                  </button>
+                  <button onClick={() => { setMenuOpen(false); handleStartPlaying(); }}>
+                    🎮 Game
+                  </button>
                   <button onClick={() => { setMenuOpen(false); window.location.hash = '#/admin'; }}>
                     ⚙ Admin
                   </button>
