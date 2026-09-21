@@ -176,13 +176,18 @@ input while someone is just reading the invite. Clicking "Start Playing" sets `s
 revealing the canvas/game view (Phase 2).
 
 Above both phases sits a single `.game-header-bar`: the banner image and a "☰" hamburger menu, side
-by side — nothing else. There's no separate settings toolbar and no persistent "Back to Invite"
-nav bar; instead, once Phase 2 is showing, the banner itself becomes the back-to-invite control (a
+by side — nothing else. It's `position: sticky; top: 0` (with a solid background), so it stays
+visible and reachable while scrolling on either screen, rather than only being present at the very
+top of the page. There's no separate settings toolbar and no persistent "Back to Invite" nav bar;
+instead, once Phase 2 is showing, the banner itself becomes the back-to-invite control (a
 `<button className="banner-link">` wrapping the `<img>`, calling the same handler) — clicking it
 returns to `InviteScreen`. It's non-interactive on the invitation screen itself, since that's
-already where it would go. The hamburger opens a small dropdown with two items: "⚙ Admin"
-(navigates `#/admin`, same route `AdminScreen.jsx` has always used) and "ℹ️ About" (opens a modal
-showing a fixed "Made with Weddin'Vaders" line plus, when set, an organizer credit — see below).
+already where it would go. The hamburger opens a small dropdown with four items: "🏠 Invitation"
+and "🎮 Game" (simple navigation between the two phases — the same `handleBackToInvite`/
+`handleStartPlaying` handlers the banner and the invite screen's CTA already use, so picking
+"Game" while a run is in progress resumes it rather than resetting), "⚙ Admin" (navigates
+`#/admin`, same route `AdminScreen.jsx` has always used), and "ℹ️ About" (opens a modal showing a
+fixed "Made with Weddin'Vaders" line plus, when set, an organizer credit — see below).
 Everything else that's actually *game* content — the board, the on-screen mobile/solo controls, and
 the keyboard-control legend — lives inside one bordered `.game-frame` card in `Game.jsx`, styled
 like `InviteScreen.css`'s own card for visual consistency between the two phases; a small

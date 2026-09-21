@@ -16,8 +16,10 @@ npm run dev
    teaser visible; "Start Playing" reveals the canvas inside a bordered game frame and jumps
    straight to mode-select (no title screen in between). Clicking the banner (now the only
    back-to-invite control above the frame) returns to the invitation screen without losing an
-   in-progress run; "Start Playing" again resumes it. The "☰" menu next to the banner (present on
-   both screens) opens Admin (`#/admin`) and About (a modal with a fixed credit line, plus an
+   in-progress run; "Start Playing" again resumes it. The "☰" menu next to the banner (sticky —
+   present on both screens and stays visible while scrolling) has four items: Invitation and Game
+   (nav between the two phases — picking Game while a run is in progress should resume it, not
+   reset to mode-select), Admin (`#/admin`), and About (a modal with a fixed credit line, plus an
    organizer link/name when set in Admin's "About / Organizer Credit" section) — verify the About
    modal closes via its Close button and via clicking outside it.
 2. **Player movement** — Groom: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot. Bride: A/D move, W shoot, S cycle ammo.

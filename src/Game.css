@@ -46,7 +46,10 @@ body {
 
 /* Banner + hamburger menu, the only thing above the game frame/invite card
    on either phase. The banner itself is the "back to invite" control once
-   Phase 2 is showing (see .banner-link) — there is no separate nav bar. */
+   Phase 2 is showing (see .banner-link) — there is no separate nav bar.
+   Sticky so it (and the hamburger's nav) stays reachable without scrolling
+   back up, on either screen — matters most on the invitation screen, whose
+   content can run taller than the viewport. */
 .game-header-bar {
   display: flex;
   align-items: center;
@@ -54,6 +57,11 @@ body {
   width: 100%;
   max-width: 910px;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 15; /* below .game-menu-backdrop/.game-menu-dropdown (20/21) and .about-modal-overlay (30) */
+  background: #050510; /* matches body's background so scrolled-under content doesn't show through */
+  padding-block: 6px;
 }
 
 .banner-link {
