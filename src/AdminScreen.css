@@ -95,6 +95,37 @@
   color: #eee;
 }
 
+.admin-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.admin-preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.admin-preset-swatches {
+  display: flex;
+  gap: 3px;
+}
+
+.admin-preset-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .admin-color-row {
   display: flex;
   align-items: center;

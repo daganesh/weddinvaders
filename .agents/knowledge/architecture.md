@@ -204,10 +204,22 @@ unlocked — still clickable, landing on that page's own `GateNotice` rather tha
 plus "⚙ Admin" (navigates `#/admin`) and "ℹ️ About" (opens a modal showing a fixed "Made with
 Weddin'Vaders" line plus, when set, an organizer credit — see below). Everything that's actually
 *game* content — the board, the on-screen mobile/solo controls, and the keyboard-control legend —
-lives inside one bordered `.game-frame` card in `Game.jsx`, styled like `InviteScreen.css`'s own
-card for visual consistency across pages; a small "💌 Back to Invite & RSVP" nudge
-(`.end-of-level-banner`, a plain `<a href="#/rsvp">`) is the one thing that still sits outside that
-frame, appearing only at level boundaries.
+lives inside one `.game-frame` card in `Game.jsx`, styled like `InviteScreen.css`'s own `.invite-screen`
+card for visual consistency across pages — a soft fill plus a drop shadow for depth, no border; a
+small "💌 Back to Invite & RSVP" nudge (`.end-of-level-banner`, a plain `<a href="#/rsvp">`) is the
+one thing that still sits outside that frame, appearing only at level boundaries.
+
+**Site-wide style convention**: card/panel-style containers (`.invite-screen`, `.game-frame`,
+`.about-modal`, the hamburger's `.game-menu-dropdown`, `PagesShared.css`'s `.page-card`) carry no
+border at all — a `box-shadow` (or, for the floating menu/modal, just their own solid background
+against the dimmed backdrop) gives them depth instead. Real buttons and button-styled links
+(`.hamburger-btn`, `.choice-btn`, `.big-btn-secondary`, `.title-link`, `.back-to-invite-btn`, the
+mode-select/ammo/about-close buttons, form inputs) keep a solid border — that's the one exception —
+and nothing anywhere uses a dashed border or a `linear-gradient` background fill (the `.bride-shoot`/
+`.groom-shoot` mobile buttons and the invite screen's `▶ START PLAYING` CTA are solid
+`brideColor`/`groomColor`/`accent`, not a gradient). The admin screen's checkerboard image-preview
+background (`AdminScreen.css`) is the one legitimate use of `linear-gradient` left in the app — it's
+a functional transparency indicator, not decorative.
 
 The canvas-drawn `title` phase (see `renderer.md`'s `drawTitle`) is skipped entirely — arriving at
 `#/game` (an effect keyed on the `active` prop) dispatches `handleAction({type:'START'})` once, the
