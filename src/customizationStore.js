@@ -28,31 +28,15 @@ function emptyItemImages() {
   return Object.fromEntries(ITEM_IMAGE_KEYS.map(id => [id, null]));
 }
 
-// Opening-page links (RSVP, gift registry, song requests, …). Each entry is
-// just `{ id, label, url }` today — a plain link, hidden on the title screen
-// while `url` is empty. `id` is a stable identifier (not shown to the admin)
-// rather than incidental array position, so a future version can single out
-// a *specific* well-known entry (e.g. upgrade the `rsvp`-id one into an
-// embedded RSVP form, or `songs` into an embedded song-request list) without
-// having to guess which entry is which from its current label — an admin can
-// freely rename, remove, or add entries, so labels/order aren't reliable
-// identity. New links the admin adds get a generated id and stay plain links
-// indefinitely; only these three well-known ids are candidates for that kind
-// of future upgrade.
-//
-// They point at the bundled static demo pages in `public/examples/` (see
-// `Game.jsx`'s `withProtocol()`, which knows to leave a site-relative path
-// like this alone) so the feature is visible and clickable out of the box —
-// not silently invisible behind an empty url, which is exactly what made this
-// feature look broken before it had real defaults. An admin replaces these
-// with their real RSVP form / registry / playlist link, same as any other
-// package's links.
-const EXAMPLES_BASE = `${import.meta.env.BASE_URL}examples/`;
-const DEFAULT_LINKS = [
-  { id: 'rsvp',     label: 'RSVP',          url: `${EXAMPLES_BASE}rsvp.html` },
-  { id: 'registry', label: 'Gift Registry', url: `${EXAMPLES_BASE}registry.html` },
-  { id: 'songs',    label: 'Song Requests', url: `${EXAMPLES_BASE}songs.html` },
-];
+// Opening-page links — free-form extras an admin adds beyond the built-in
+// pages (directions, wedding website, hotel block, dress code…). RSVP,
+// Registry, Songs, and Food used to live here too (as external links to
+// bundled demo pages), but are now real in-app pages (RsvpPage.jsx,
+// RegistryPage.jsx, SongsPage.jsx, FoodPage.jsx) reached via dedicated nav —
+// see `PageHeader.jsx` and `InviteScreen.jsx`. Nothing seeds this list by
+// default any more; an admin adds entries here only for genuinely external
+// links this app has no dedicated page for.
+const DEFAULT_LINKS = [];
 
 // Mirrors every currently-hardcoded value in renderer.js/constants.js/levels.js,
 // so the default package produces today's game unchanged. Also used by
@@ -108,6 +92,16 @@ export const DEFAULT_CONFIG = {
     // entirely; a name with no url renders as plain (non-link) text.
     organizerName: '',
     organizerUrl: '',
+    // The Registry page (RegistryPage.jsx) is just a gated landing page —
+    // the actual registry lives elsewhere (Zola, Amazon, a spreadsheet…), so
+    // this is the one URL it links out to once unlocked. Blank shows a
+    // "not set up yet" message instead of a dead link.
+    registryUrl: '',
+    // Songs/Food are optional per wedding — an admin who doesn't want to
+    // collect one or the other turns it off here rather than leaving an
+    // empty page reachable. Both default on since they're the common case.
+    songsEnabled: true,
+    foodEnabled: true,
     names: { bride: 'Bride', groom: 'Groom' },
     familyLabels: { bride: 'Her Family', groom: 'His Family' },
     // Parallel array to LEVELS in levels.js, indexed by array position.

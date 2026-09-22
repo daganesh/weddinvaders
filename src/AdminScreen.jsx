@@ -306,11 +306,52 @@ export default function AdminScreen({ onExit }) {
         </section>
 
         <section>
-          <h2>Links</h2>
+          <h2>Pages</h2>
           <p className="admin-hint">
-            Shown on the opening screen — hidden individually while their URL is blank. Add as many
-            as you like: RSVP, gift registry, song requests, directions, wedding website, hotel
-            block, dress code…
+            RSVP, Gift Registry, Song Requests, and Food Requests are built-in pages, not links —
+            see below and each page's own settings.
+          </p>
+          <label className="admin-text-row">
+            Gift registry URL
+            <input
+              value={draft.text.registryUrl}
+              onChange={e => setTextField('registryUrl', e.target.value)}
+              placeholder="https://…"
+            />
+          </label>
+          <p className="admin-hint">
+            The Registry page just links out to this — Zola, Amazon, a spreadsheet, anything with
+            a URL. Left blank, guests see a "not set up yet" message. Unlocks once a guest submits
+            any RSVP (even "not attending" — they may still want to send a gift).
+          </p>
+          <label className="admin-checkbox-row">
+            <input
+              type="checkbox"
+              checked={draft.text.songsEnabled}
+              onChange={e => setTextField('songsEnabled', e.target.checked)}
+            />
+            Collect song requests
+          </label>
+          <label className="admin-checkbox-row">
+            <input
+              type="checkbox"
+              checked={draft.text.foodEnabled}
+              onChange={e => setTextField('foodEnabled', e.target.checked)}
+            />
+            Collect food requests / allergies
+          </label>
+          <p className="admin-hint">
+            Both unlock only for guests who confirmed they're attending. Turning either off hides
+            it everywhere instead of leaving an empty page reachable.
+          </p>
+        </section>
+
+        <section>
+          <h2>Extra Links</h2>
+          <p className="admin-hint">
+            Anything else with a URL that doesn't have its own page yet — directions, wedding
+            website, hotel block, dress code… Shown on the opening screen, hidden individually
+            while their URL is blank.
           </p>
           {draft.links.map((link, i) => (
             <div className="admin-link-row" key={link.id}>

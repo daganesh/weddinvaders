@@ -103,8 +103,8 @@ new `hourglass` is `2` (rare, same tier as family).
 ## Customization Layer
 An admin can override a small set of visuals/text — first step toward a white-label product for
 wedding-arranging companies. Reached via a `#/admin` hash route, one item in a "☰" hamburger menu
-next to the banner (shown on both the invitation screen and the game view — there's no separate
-settings toolbar); config is stored in `localStorage` behind
+next to the banner (shown on every page — there's no separate settings toolbar); config is stored
+in `localStorage` behind
 `src/customizationStore.js` as named **packages** (see `architecture.md`'s "Packages" section) — a
 permanent read-only `default` plus any number of admin-created ones, exactly one of which is
 "active" (used by the running game) at a time. In scope per package: the bride/groom/couple images
@@ -117,29 +117,30 @@ stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 
 package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`.
 
 The invitation message (`text.invitation`) is the actual wedding-invite copy — freeform, no
-placeholder substitution — shown as its own paragraph on the invitation screen (`InviteScreen.jsx`,
-Phase 1 of the app, shown before the game itself — see `architecture.md`); blank hides it. The
-wedding date/time (`text.weddingDateTime`, a **required** date-time field) and venue address
-(`text.venueAddress`, optional — blank omits the venue everywhere) drive that same screen's
-header and its two computed links, Add to Calendar and Venue Maps (see `invite-screen.md`'s
-`eventLinks.js`). Also in scope: an admin-managed list of **opening-page links** (RSVP, gift
-registry, song requests, and anything else — directions, wedding website, hotel block…), shown as
-pill buttons on the invitation screen only (alongside the two computed links above) — hidden
-individually while blank. There's no repeat of these on the game view any more; an earlier version
-kept a persistent post-game footer, but it duplicated the invitation screen for no benefit and was
-removed along with the old standalone settings toolbar (see "Invitation screen" below and
-`architecture.md`). Both system packages seed the three well-known ones (RSVP/registry/songs) with
-a real url out of the box, pointing at simple static demo pages bundled in `public/examples/` (each
-opens in a new tab and explains it's a placeholder), so the feature is visible without any admin
-setup — an earlier version left them blank by default, which just made the feature invisible.
-Plain links today; see `architecture.md`'s "Opening-page links" for why each entry carries a stable
-id (so specific well-known ones could later become an embedded RSVP form, song-request list, or
-registry checklist instead of just a link).
+placeholder substitution — shown as its own paragraph on the home page (`InviteScreen.jsx` — see
+`architecture.md`); blank hides it. The wedding date/time (`text.weddingDateTime`, a **required**
+date-time field) and venue address (`text.venueAddress`, optional — blank omits the venue
+everywhere) drive that same page's header and its two computed links, Add to Calendar and Venue
+Maps (see `invite-screen.md`'s `eventLinks.js`).
 
-Also in scope: an **organizer credit** (`text.organizerName`/`organizerUrl`, both optional) shown in
-the game view's "About" menu item (next to "Admin" in the same hamburger menu) — a PR/marketing hook
-for the wedding-arranging company or venue running the game, not the couple. Blank hides the credit
-line entirely.
+**RSVP, Gift Registry, Song Requests, and Food Requests are real in-app pages now**, not external
+links to bundled demo HTML (an earlier version worked that way) — see `architecture.md`'s "Routing &
+pages" and `rsvp-pages.md`. RSVP (always open) gates the other three: Registry unlocks once a guest
+submits any RSVP response (even "not attending" — they may still send a gift), Songs/Food unlock
+only once they've confirmed they're attending. This gate is **local-only**: it lives in the guest's
+own browser (`rsvpStore.js`), not a real guest-list a couple can see — a genuine backend or
+third-party form service is a deliberate, separate later decision. Songs/Food are each individually
+toggleable (`text.songsEnabled`/`foodEnabled`, both default `true`) for a couple not collecting one
+or the other. Separately, an admin-managed list of **opening-page links** (anything external without
+its own page — directions, wedding website, hotel block, dress code…) still shows as pill buttons
+in the home page's "Extra Links" row, hidden individually while blank; see `architecture.md`'s
+"Opening-page links" for why each entry carries a stable id.
+
+Also in scope: a Gift Registry destination URL (`text.registryUrl`, optional — the Registry page
+just links out to it, blank shows a "not set up yet" message), and an **organizer credit**
+(`text.organizerName`/`organizerUrl`, both optional) shown in the "About" menu item (in the same
+hamburger menu every page shares) — a PR/marketing hook for the wedding-arranging company or venue
+running the game, not the couple. Blank hides the credit line entirely.
 
 Out of scope: control-legend/instruction text, the dynamic lose-reason phrasing, per-item labels
 beyond family, and the floating pickup-toast text (spawn-time snapshot, not customization-aware —

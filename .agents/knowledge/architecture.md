@@ -22,11 +22,20 @@ src/
 ├── customizationStore.js  # localStorage-backed customization config (images/colors/text) + DEFAULT_CONFIG + EIGHTIES_CONFIG — the only module that touches localStorage
 ├── useCustomization.js    # Ref-based hook wrapping customizationStore.getConfig()
 ├── imageProcessing.js     # fileToImageDataUrl() — SVG uploads pass through as-is; fileToProcessedPngDataUrl() downscales + re-encodes raster uploads to PNG, fades near-white pixels to transparent
-├── InviteScreen.jsx  # Phase 1: the pre-game "digital wedding card" DOM screen — see "Invitation screen" below
+├── InviteScreen.jsx  # 'home' route: the "digital wedding card" — see "Routing & pages" below
 ├── InviteScreen.css
+├── RsvpPage.jsx      # 'rsvp' route: the real, working RSVP form + confirmation view
+├── RegistryPage.jsx  # 'registry' route: gated landing page linking out to text.registryUrl
+├── SongsPage.jsx     # 'songs' route: gated song-request form (local-only, per guest)
+├── FoodPage.jsx      # 'food' route: gated food/allergy notes form (local-only, per guest)
+├── GateNotice.jsx    # Shared "locked" view rendered by Registry/Songs/Food when not yet unlocked
+├── PagesShared.css   # Shared look for the four pages above (.page-card, .big-btn, .choice-row, .stepper, …)
+├── rsvpStore.js      # Local-only (no backend) RSVP response store — see "Routing & pages" below
+├── useRsvpStatus.js  # Reactive hook wrapping rsvpStore.js, mirroring useCustomization.js
+├── PageHeader.jsx    # Shared banner + hamburger nav, rendered once by App.jsx above every non-admin page
 ├── eventLinks.js     # Pure helpers: builds the Google Calendar / Venue Maps links + formats the header date from text.weddingDateTime/venueAddress
-├── linkUtils.js       # withProtocol() — shared by Game.jsx and InviteScreen.jsx
-├── LinksRow.jsx       # Shared pill-link row component — renders a package's opening-page links (used by both Game.jsx and InviteScreen.jsx)
+├── linkUtils.js       # withProtocol() — shared by several pages
+├── LinksRow.jsx       # Shared pill-link row component for *external* admin-configured links (InviteScreen.jsx's "Extra Links")
 ├── AdminScreen.jsx   # Admin UI (reached via #/admin hash route) for editing the customization config
 ├── AdminScreen.css
 └── assets/
@@ -36,36 +45,58 @@ src/
     ├── banner-default.svg  # bundled fallback for the header banner (Default package)
     ├── banner-80s.svg       # 80s Arcade package's pixel-art header banner
     └── icons/         # 12 hand-built 16×16 pixel-art SVGs (one per WEDDING_ITEMS id), the 80s Arcade system package's item images
-
-public/
-└── examples/         # static demo pages the Default/80s packages' seeded links point to —
-    ├── style.css     # not part of the Vite/React build; served verbatim at <base>/examples/*
-    ├── rsvp.html
-    ├── registry.html
-    └── songs.html
 ```
 
-`App.jsx` is no longer a pure passthrough: it does a minimal hash-based route check
-(`window.location.hash === '#/admin'`) and renders `<AdminScreen>` or `<Game>` accordingly —
-no router dependency, since this is currently the only extra screen.
+`public/examples/` (the old bundled static demo pages RSVP/Registry/Songs used to link to) is gone —
+those three are real in-app pages now, not external links to placeholder HTML.
 
-## Data Flow
+## Routing & pages
+
+`App.jsx` is a small hash router, not a passthrough: `getRoute()` reads `window.location.hash`
+against a fixed `ROUTES` set (`rsvp`, `registry`, `songs`, `food`, `game`, `admin`) and falls back to
+`'home'` for anything else (including no hash at all). No router dependency — same reasoning the
+single `#/admin` check used before this existed. `admin` is the one route that fully replaces the
+tree (`<AdminScreen>` alone, no shared chrome); every other route shares one `PageHeader.jsx` (the
+sticky banner + hamburger nav) and renders inside the same `.game-wrapper`/`.game-container` shell.
+
+**Every non-admin page is always mounted** — `App.jsx` renders all of them every time and toggles
+`display: none` on whichever isn't the current route, rather than a router unmounting the losing
+ones. This matters most for `Game.jsx`: its running state lives in a hook local to that component
+(`useGameState()`'s `stateRef`), so unmounting it on navigation would destroy an in-progress run.
+The lighter pages (RSVP draft text, a not-yet-added song request) get the same treatment for free —
+an unmounted-and-remounted `RsvpPage` would otherwise lose an in-progress draft on a detour to
+another page.
+
 ```
-Game.jsx                          → knowledge/game-jsx.md
-  ├── showInvite  ←  React state, true by default (Phase 1: InviteScreen.jsx)
-  │                  false once "Start Playing" is clicked (Phase 2: this canvas)
-  ├── useGameState(!showInvite)  →  stateRef (never React state — avoids re-renders)
-  │                                → knowledge/use-game-state.md
-  ├── useAssets()     →  assetsRef
-  ├── uiPhase/uiMode/uiSoloRole  ←  lightweight React-state mirrors, updated
-  │                                 only on phase change (drive mode-select
-  │                                 overlay + couple/solo control swap)
-  └── requestAnimationFrame loop (started/stopped with showInvite, so
-      leaving/returning to the invite screen pauses/resumes a run):
-        update(stateRef)   ← pure mutation via setState(updater)
-        render(ctx, state, assets, config)
-                                   → knowledge/renderer.md
+App.jsx                            → knowledge/game-jsx.md (Game), knowledge/rsvp-pages.md (the rest)
+  ├── route  ←  from window.location.hash, updated on 'hashchange'
+  ├── PageHeader (banner + hamburger, shown on every route except 'admin')
+  ├── InviteScreen   (visible only when route === 'home')
+  ├── RsvpPage       (visible only when route === 'rsvp')
+  ├── RegistryPage   (visible only when route === 'registry')
+  ├── SongsPage      (visible only when route === 'songs')
+  ├── FoodPage       (visible only when route === 'food')
+  └── Game           (visible only when route === 'game'; active={route === 'game'})
+        ├── useGameState(active)  →  stateRef (never React state — avoids re-renders)
+        │                          → knowledge/use-game-state.md
+        ├── useAssets()     →  assetsRef
+        ├── uiPhase/uiMode/uiSoloRole  ←  lightweight React-state mirrors, updated
+        │                                 only on phase change (drive mode-select
+        │                                 overlay + couple/solo control swap)
+        └── requestAnimationFrame loop (started/stopped with `active`, so
+            navigating away/back pauses/resumes a run):
+              update(stateRef)   ← pure mutation via setState(updater)
+              render(ctx, state, assets, config)
+                                     → knowledge/renderer.md
 ```
+
+RSVP responses (and each guest's song requests / food notes) live in `localStorage` behind
+`rsvpStore.js` — **local-only, no backend**: they unlock pages for the guest on their own
+device/browser, but are not collected anywhere the couple can see them yet (a real backend or a
+third-party form service is a deliberate later decision, same posture `customizationStore.js`
+already documents for admin config). `useRsvpStatus.js` wraps it in a small pub-sub so a lock icon
+in `PageHeader`/`InviteScreen` updates immediately after a submit elsewhere in the app, not just on
+the next navigation — see `rsvp-pages.md`.
 Both `useGameState.js` and `renderer.js` read shared data/config from
 `constants.js` (dimensions, timing, `WEDDING_ITEMS`, `AMMO_META`) and
 `levels.js` (`LEVELS`, `getSpawnPool()`, `isLevelComplete()`) — see
@@ -129,85 +160,68 @@ on failure so the user can see the message and retry.
 ### Opening-page links
 
 `links` (sibling to `images`/`colors`/`text` in a package's config) is a free-form array of
-`{ id, label, url }` — RSVP, gift registry, song requests, or anything else an admin adds
-(directions, wedding website, hotel block, dress code…). Rendered as a row of pill buttons via the
-shared `LinksRow.jsx` component (hidden entirely if every `url` is blank), on `InviteScreen.jsx`
-only — alongside two more *computed* entries, Add to Calendar / Venue Maps (see "Invitation screen"
-below). `Game.jsx`'s game view (Phase 2) does **not** repeat this links row any more: an earlier
-version kept a persistent post-game footer, but that duplicated what the invitation screen already
-shows, so it was removed along with the old separate settings toolbar — see "Invitation screen"
-below for what replaced both.
+`{ id, label, url }` for genuinely **external** extras an admin adds beyond the built-in pages —
+directions, wedding website, hotel block, dress code… RSVP, Registry, Songs, and Food used to live
+here too (as links to bundled static demo pages), but are now real in-app pages — see "Routing &
+pages" above and `rsvp-pages.md`. `DEFAULT_CONFIG.links` is empty by default now; nothing seeds it.
+Rendered as a row of pill buttons via the shared `LinksRow.jsx` component (hidden entirely if every
+`url` is blank), on `InviteScreen.jsx`'s "Extra Links" row only, alongside two more *computed*
+entries, Add to Calendar / Venue Maps (see "Routing & pages" above).
 Unlike `images`/`colors` (fixed sets of named fields, merged key-by-key over `DEFAULT_CONFIG` so a
 partial/legacy package never leaves one `undefined`), `links` is admin-managed free-form content —
 `customizationStore.js`'s `mergeContent()` takes a package's own `links` array as-is (through
 `sanitizeLinks()`, which repairs missing/non-string fields rather than merging entry-by-entry) and
 only falls back to `DEFAULT_CONFIG.links` when the package has no `links` array at all (e.g. one
-saved before this feature existed). `DEFAULT_CONFIG.links` seeds exactly three entries — ids `rsvp`,
-`registry`, `songs` — each pointing at one of the bundled static demo pages in `public/examples/`
-(`${import.meta.env.BASE_URL}examples/{rsvp,registry,songs}.html`) rather than an empty `url`: an
-earlier version shipped these with a blank `url` (hidden entirely, per the "hide while blank" rule
-below) on the theory that a dead placeholder link was worse than no link — in practice that just
-made the whole feature look broken/invisible out of the box, since the *only* built-in packages are
-these two read-only system ones and neither ever showed anything. Real demo pages fix that: the
-Default/80s invitation screens now show all three links immediately, each opening its own simple
-styled page (in a new tab) explaining it's a placeholder and naming where to swap in the couple's
-real RSVP form / registry / playlist link. An admin can still set any `url` back to empty to hide a
-link individually. `id` is a stable identifier never shown in `AdminScreen.jsx`'s UI: today every
-entry (the three seeded ones and any the admin adds via "+ Add link") renders identically as a
-plain link, but keeping a stable, well-known id on the three seeded ones is what would let a future
-version single out *that specific* entry to upgrade into something richer (an embedded RSVP form, a
-live song-request list, a registry checklist) without having to guess which entry is which from a
-label the admin may have renamed — labels/order aren't reliable identity, ids are. An admin-added
-custom link gets a generated id and stays a plain link indefinitely. `LinksRow.jsx` renders each
-visible link's `href` through `linkUtils.js`'s `withProtocol()`, which prepends `https://` when the
-admin typed a bare domain (`example.com/rsvp`) instead of a full URL, but leaves a site-relative
-path (like the bundled examples' `/weddinvaders/examples/...` urls) untouched. Every link opens via
+saved before this feature existed). `id` is a stable identifier (not shown in `AdminScreen.jsx`'s
+UI) rather than incidental array position, so labels/order stay freely editable without breaking
+anything that might key off a specific entry later; an admin-added link gets a generated id.
+`LinksRow.jsx` renders each visible link's `href` through `linkUtils.js`'s `withProtocol()`, which
+prepends `https://` when the admin typed a bare domain (`example.com/...`) instead of a full URL,
+but leaves a site-relative path untouched. Every link opens via
 `target="_blank" rel="noopener noreferrer"` — a real anchor, not a canvas click handler — so it
-always opens in a new tab and never navigates the game away.
+always opens in a new tab and never navigates the game away. **Not** used for the in-app page nav
+(RSVP/Registry/Songs/Food/Game hash links in `InviteScreen.jsx`/`PageHeader.jsx`) — those are plain
+`<a href="#/...">` tags rendered directly, since running a bare hash fragment through
+`withProtocol()` would mangle it into `https://#/rsvp`.
 
-### Invitation screen (Phase 1) vs. game view (Phase 2)
+### Home screen (InviteScreen) and the game page
 
-`Game.jsx` owns one more piece of UI state beyond the game's own phase machine: `showInvite`
-(`true` by default). While true, `InviteScreen.jsx` renders instead of the canvas — a plain DOM
-"digital wedding card" (couple names, wedding date/time, venue, the invitation copy, the links row
-described above, and a teaser banner reusing `text.title`/`text.tagline` with a "▶ START PLAYING"
-button) — and the `<canvas>` element isn't mounted at all, so it structurally can't receive touch
-input while someone is just reading the invite. Clicking "Start Playing" sets `showInvite` false,
-revealing the canvas/game view (Phase 2).
+`InviteScreen.jsx` (the `'home'` route) is a plain DOM "digital wedding card" — couple names,
+wedding date/time, venue, the invitation copy, the in-app page-nav row and the external "Extra
+Links" row (see "Routing & pages" and "Opening-page links" above), and a teaser banner reusing
+`text.title`/`text.tagline` with a "▶ START PLAYING" link to `#/game`. `Game.jsx` (the `'game'`
+route) is the canvas view — see `game-jsx.md`. Both are always-mounted siblings under `App.jsx`
+(see "Routing & pages"), not a single component internally toggling between them the way an
+earlier version worked.
 
-Above both phases sits a single `.game-header-bar`: the banner image and a "☰" hamburger menu, side
-by side — nothing else. It's `position: sticky; top: 0` (with a solid background), so it stays
-visible and reachable while scrolling on either screen, rather than only being present at the very
-top of the page. There's no separate settings toolbar and no persistent "Back to Invite" nav bar;
-instead, once Phase 2 is showing, the banner itself becomes the back-to-invite control (a
-`<button className="banner-link">` wrapping the `<img>`, calling the same handler) — clicking it
-returns to `InviteScreen`. It's non-interactive on the invitation screen itself, since that's
-already where it would go. The hamburger opens a small dropdown with four items: "🏠 Invitation"
-and "🎮 Game" (simple navigation between the two phases — the same `handleBackToInvite`/
-`handleStartPlaying` handlers the banner and the invite screen's CTA already use, so picking
-"Game" while a run is in progress resumes it rather than resetting), "⚙ Admin" (navigates
-`#/admin`, same route `AdminScreen.jsx` has always used), and "ℹ️ About" (opens a modal showing a
-fixed "Made with Weddin'Vaders" line plus, when set, an organizer credit — see below).
-Everything else that's actually *game* content — the board, the on-screen mobile/solo controls, and
-the keyboard-control legend — lives inside one bordered `.game-frame` card in `Game.jsx`, styled
-like `InviteScreen.css`'s own card for visual consistency between the two phases; a small
-"💌 Back to Invite & RSVP" nudge (`.end-of-level-banner`, described below) is the one thing that
-still sits outside that frame, appearing only at level boundaries.
+Above every route except `admin` sits a single `.game-header-bar` (`PageHeader.jsx`): the banner
+image and a "☰" hamburger menu, side by side — nothing else. It's `position: sticky; top: 0` (with
+a solid background), so it stays visible and reachable while scrolling on any page. The banner
+itself is a plain `<a className="banner-link" href="#/">` wrapping the `<img>`. The hamburger opens a dropdown listing every
+page (🏠 Invitation, 💌 RSVP, 🎁 Registry, 🎵 Songs / 🍽️ Food when enabled, 🎮 Game) as plain
+`<a href="#/...">` tags, each marked with a 🔒 (and dimmed via `.is-locked`) when gated and not yet
+unlocked — still clickable, landing on that page's own `GateNotice` rather than being disabled —
+plus "⚙ Admin" (navigates `#/admin`) and "ℹ️ About" (opens a modal showing a fixed "Made with
+Weddin'Vaders" line plus, when set, an organizer credit — see below). Everything that's actually
+*game* content — the board, the on-screen mobile/solo controls, and the keyboard-control legend —
+lives inside one bordered `.game-frame` card in `Game.jsx`, styled like `InviteScreen.css`'s own
+card for visual consistency across pages; a small "💌 Back to Invite & RSVP" nudge
+(`.end-of-level-banner`, a plain `<a href="#/rsvp">`) is the one thing that still sits outside that
+frame, appearing only at level boundaries.
 
-The canvas-drawn `title` phase (see `renderer.md`'s `drawTitle`) is skipped entirely — the first
-"Start Playing" click dispatches `handleAction({type:'START'})` directly (a synchronous ref
-mutation, so it lands before the canvas ever renders a frame), taking the game straight to
-`modeSelect`. `useGameState.js`'s `active` parameter (`Game.jsx` passes `!showInvite`) gates the
-keyboard-input effect for the same reason the loop is stopped/started with `showInvite` (see the
-Data Flow diagram above): without it, a stray keypress while browsing the invitation screen could
-silently advance a paused `meeting`/`levelComplete` screen or reset a finished game in the
-background, since that listener is otherwise always mounted at the `window` level regardless of
-what's currently visible.
+The canvas-drawn `title` phase (see `renderer.md`'s `drawTitle`) is skipped entirely — arriving at
+`#/game` (an effect keyed on the `active` prop) dispatches `handleAction({type:'START'})` once, the
+first time `phase` is still `'title'`, taking the game straight to `modeSelect`. `useGameState.js`'s
+`active` parameter (`App.jsx` passes `route === 'game'` down to `Game`) gates the keyboard-input
+effect for the same reason the loop is stopped/started with `active` (see the Data Flow diagram
+above): without it, a stray keypress while browsing another page could silently advance a paused
+`meeting`/`levelComplete` screen or reset a finished game in the background, since that listener is
+otherwise always mounted at the `window` level regardless of what's currently visible.
 
-"Back to Invite" pauses rather than resets: `stopLoop()` freezes `update()` (and therefore every
-per-frame timer) mid-run, and `startLoop()` on the next "Start Playing" click picks up exactly
-where it left off — `handleStartPlaying` only dispatches `START` when `phase === 'title'` (i.e. the
-very first time), so a returning player doesn't get bounced back to mode-select. A small
+Navigating away from `#/game` pauses rather than resets: `stopLoop()` freezes `update()` (and
+therefore every per-frame timer) mid-run, and `startLoop()` on returning picks up exactly where it
+left off — the `START`-dispatch effect only fires while `phase === 'title'` (i.e. the very first
+time), so a returning player doesn't get bounced back to mode-select. A small
 "💌 Back to Invite & RSVP" banner (`Game.jsx`'s `.end-of-level-banner`) also appears on every level
 boundary — a level win (`meeting`), the full-game win (`gameComplete`), a level loss (`lost`), or
 time-out (`levelComplete`) — not just the final victory, since clearing all 5 levels takes several
@@ -225,6 +239,12 @@ Two more `text` fields, `organizerName`/`organizerUrl` (both optional, default `
 About modal's organizer credit — a PR/marketing hook for the wedding-arranging company or venue
 running the game as a white-label product, distinct from the couple themselves. Both blank hides
 the line entirely; a name with no url renders as plain (non-link) text rather than a broken anchor.
+
+Three more fields drive the pages/gating described in "Routing & pages" and `rsvp-pages.md`:
+`registryUrl` (optional — `RegistryPage.jsx`'s one external link once unlocked; blank shows a "not
+set up yet" message instead of a dead link), and `songsEnabled`/`foodEnabled` (booleans, default
+`true` — an admin who isn't collecting one or the other turns it off, hiding it from the nav/home
+page entirely rather than leaving an empty page reachable).
 
 ### Game Modes
 
@@ -261,7 +281,9 @@ solo-only mobile control surface.
   (`.admin-screen button`).
 
 ## Entry Point
-`src/main.jsx` → `<App />` → `<Game />` — the canvas is the only meaningful DOM node.
+`src/main.jsx` → `<App />` — the hash router; renders `<AdminScreen>` alone for `#/admin`, or
+`<PageHeader>` plus every page (`InviteScreen`/`RsvpPage`/`RegistryPage`/`SongsPage`/`FoodPage`/
+`Game`, all always-mounted, one visible at a time) for every other route.
 
 ## Component Files
 | File | Covers |
@@ -269,5 +291,6 @@ solo-only mobile control surface.
 | [`knowledge/use-game-state.md`](use-game-state.md) | `useGameState()` hook in `src/useGameState.js` — core game logic, input, update loop |
 | [`knowledge/renderer.md`](renderer.md) | `render()` and draw functions in `src/renderer.js` — all canvas drawing |
 | [`knowledge/game-jsx.md`](game-jsx.md) | `Game` component in `src/Game.jsx` — React shell wiring hooks + canvas + controls |
-| [`knowledge/invite-screen.md`](invite-screen.md) | `InviteScreen` component in `src/InviteScreen.jsx` — Phase 1 pre-game DOM screen |
+| [`knowledge/invite-screen.md`](invite-screen.md) | `InviteScreen` component in `src/InviteScreen.jsx` — the home-page DOM screen |
+| [`knowledge/rsvp-pages.md`](rsvp-pages.md) | `RsvpPage`/`RegistryPage`/`SongsPage`/`FoodPage`/`PageHeader`/`GateNotice` + `rsvpStore.js`/`useRsvpStatus.js` |
 | [`knowledge/constants.md`](constants.md) | `src/constants.js` — shared dimensions, timing, `WEDDING_ITEMS`, `AMMO_META` schema |
