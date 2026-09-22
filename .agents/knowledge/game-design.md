@@ -116,6 +116,16 @@ level's name/subtitle, and the "Her Family"/"His Family" labels). The banner def
 stylized graphic reading "Bride & Groom's Wedding!" (a pixel-art version in the 80s Arcade system
 package) — see `architecture.md`'s "Packages" section and `game-jsx.md`'s `.game-banner`.
 
+The Colors section's six free-form pickers are backed by `customizationStore.js`'s
+`COLOR_PRESETS` — three named, pre-vetted palettes ("Classic Gold", "Midnight Arcade", "Ink &
+Gold") shown as one-click swatch buttons above the pickers. Each pairs a bright accent against a
+near-black/navy background and keeps `brideColor`/`groomColor` distinguishable under red-green
+color blindness and (by relative brightness alone) full color blindness — a low-contrast pairing
+like dark orange on black is exactly what these exist to steer an admin away from; a bright
+yellow/gold accent on a near-black background is the safe baseline every preset follows. Applying
+one overwrites the whole `colors` object at once; the individual pickers stay available
+afterward for fine-tuning.
+
 The invitation message (`text.invitation`) is the actual wedding-invite copy — freeform, no
 placeholder substitution — shown as its own paragraph on the home page (`InviteScreen.jsx` — see
 `architecture.md`); blank hides it. The wedding date/time (`text.weddingDateTime`, a **required**
