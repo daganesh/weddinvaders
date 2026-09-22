@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   DEFAULT_CONFIG,
+  COLOR_PRESETS,
   listPackages,
   getActivePackageId,
   getPackage,
@@ -131,6 +132,10 @@ export default function AdminScreen({ onExit }) {
 
   function setColor(key, value) {
     setDraft(c => ({ ...c, colors: { ...c.colors, [key]: value } }));
+  }
+
+  function applyColorPreset(preset) {
+    setDraft(c => ({ ...c, colors: { ...preset.colors } }));
   }
 
   function setTextField(key, value) {
@@ -402,6 +407,26 @@ export default function AdminScreen({ onExit }) {
 
         <section>
           <h2>Colors</h2>
+          <p className="admin-hint">
+            Pick a color-blind-safe starting point, then fine-tune with the pickers below.
+          </p>
+          <div className="admin-preset-row">
+            {COLOR_PRESETS.map(preset => (
+              <button
+                key={preset.id}
+                type="button"
+                className="admin-preset-btn"
+                style={{ background: preset.colors.bgMid, color: preset.colors.accent }}
+                onClick={() => applyColorPreset(preset)}
+              >
+                {preset.name}
+                <span className="admin-preset-swatches">
+                  <span className="admin-preset-swatch" style={{ background: preset.colors.brideColor }} />
+                  <span className="admin-preset-swatch" style={{ background: preset.colors.groomColor }} />
+                </span>
+              </button>
+            ))}
+          </div>
           {Object.entries(draft.colors).map(([key, value]) => (
             <label key={key} className="admin-color-row">
               <span>{key}</span>

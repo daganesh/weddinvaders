@@ -148,6 +148,38 @@ export const EIGHTIES_CONFIG = {
   },
 };
 
+// One-click starting points for the Colors section's free-form pickers —
+// pre-vetted for readability and color-blind safety, so an admin who just
+// wants "something that works" doesn't have to reason about contrast or CVD
+// (color vision deficiency) themselves. Each pairs a light accent against a
+// near-black/navy background (dark-on-dark or a low-contrast hue pairing —
+// e.g. dark orange text on black — is exactly what these exist to avoid;
+// yellow/gold-on-near-black is the safe, high-contrast baseline every preset
+// here follows) and keeps brideColor/groomColor far enough apart in hue that
+// they stay distinguishable under the common red-green deficiencies
+// (protanopia/deuteranopia) as well as full color blindness (achromatopsia),
+// where only relative brightness remains — checked by eye against a
+// grayscale rendering of each pair. Applying a preset overwrites the whole
+// `colors` object at once; the individual pickers below stay available for
+// fine-tuning afterward.
+export const COLOR_PRESETS = [
+  {
+    id: 'classic-gold',
+    name: 'Classic Gold',
+    colors: { bgTop: '#1a3a70', bgMid: '#22478a', bgBot: '#1a3a70', accent: '#ffd700', brideColor: '#ff69b4', groomColor: '#4169e1' },
+  },
+  {
+    id: 'midnight-arcade',
+    name: 'Midnight Arcade',
+    colors: { bgTop: '#0d0d1f', bgMid: '#161636', bgBot: '#0d0d1f', accent: '#ffd23f', brideColor: '#ff3fa0', groomColor: '#33e6ff' },
+  },
+  {
+    id: 'ink-and-gold',
+    name: 'Ink & Gold',
+    colors: { bgTop: '#000000', bgMid: '#0a0a0a', bgBot: '#000000', accent: '#ffee33', brideColor: '#ff4da6', groomColor: '#4da6ff' },
+  },
+];
+
 // Protected, code-defined packages available out of the box on every deploy —
 // never persisted to localStorage, can't be edited/renamed/deleted, only
 // selected as active or used as a "copy from" source for a new package.
