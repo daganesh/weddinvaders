@@ -15,12 +15,12 @@ Called once per mount from `Game.jsx` (see [`game-jsx.md`](game-jsx.md)):
 ```js
 const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState(active);
 ```
-`active` (default `true`) gates the keyboard-input effect — `Game.jsx` passes `!showInvite`, false
-while the invitation screen (not the canvas) is showing. Without this, the keydown listener (which
-is always mounted at the `window` level, independent of whether the canvas is visible) could
-silently advance a paused `meeting`/`levelComplete` screen or reset a finished game from a stray
-keypress while the player is just reading the invitation card — see `game-jsx.md`'s "Back to
-Invite" pause/resume, which stops/starts the render loop for the equivalent per-frame case.
+`active` (default `true`) gates the keyboard-input effect — `Game.jsx` passes the `active` prop it
+receives from `App.jsx` (true only while the `#/game` route is showing). Without this, the keydown
+listener (which is always mounted at the `window` level, independent of whether the canvas is
+visible) could silently advance a paused `meeting`/`levelComplete` screen or reset a finished game
+from a stray keypress while the player is on another page — see `game-jsx.md`'s pause/resume, which
+stops/starts the render loop for the equivalent per-frame case.
 
 Internally, state lives in `stateRef` (a `useRef`, not `useState` — see architecture.md's "Key
 Design Decisions") seeded by `getInitialState(levelIndex = 0, mode = 'couple', soloRole = null)`

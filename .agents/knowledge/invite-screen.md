@@ -1,34 +1,36 @@
 # Component: `InviteScreen` (`src/InviteScreen.jsx`)
 
 ## Location
-`src/InviteScreen.jsx` — `export default function InviteScreen({ config, onStartPlaying })`.
-Small, purely presentational — no hooks, no local state.
+`src/InviteScreen.jsx` — `export default function InviteScreen({ config })`. The `'home'` route's
+content.
 
 ## Purpose
-Phase 1 of the app (see `architecture.md`'s "Invitation screen (Phase 1) vs. game view (Phase 2)"):
-a plain DOM "digital wedding card," shown by default instead of the canvas. It carries everything a
-guest needs before ever touching the game — who/when/where, the essential links, and a teaser for
-the game — with a single CTA (`onStartPlaying`, wired to `Game.jsx`'s `handleStartPlaying`) into
-Phase 2. Deliberately not canvas-drawn, same reasoning as `.mode-select-overlay`/the old
+The home page (see `architecture.md`'s "Routing & pages" and "Home screen"): a plain DOM "digital
+wedding card." It carries everything a guest needs before ever touching the game — who/when/where,
+navigation into the real RSVP/Registry/Songs/Food pages, and a teaser for the game itself with a
+link into it. Deliberately not canvas-drawn, same reasoning as `.mode-select-overlay`/the old
 canvas title notice: the couple names/date/venue/invitation copy are admin-customizable,
 variable-length text that needs to wrap like normal HTML, and every link here needs to be a real
 anchor regardless.
 
 ## Construction
-Rendered by `Game.jsx` when `showInvite` is true:
+Rendered by `App.jsx`, always mounted alongside every other page, visible only on the `'home'` route:
 ```jsx
-<InviteScreen config={activeConfig} onStartPlaying={handleStartPlaying} />
+<div style={{ display: route === 'home' ? undefined : 'none' }}>
+  <InviteScreen config={activeConfig} />
+</div>
 ```
-Props only — `config` is the active package's full config (read the same non-ref way `Game.jsx`
-reads it elsewhere, via `getActiveConfig()`, since this is display-only).
+`config` only — the active package's full config (read the same non-ref way other pages read it,
+via `getActiveConfig()`, since this is display-only).
 
 ## Key Surface
 | Element | Purpose |
 |---|---|
 | `.invite-header` | Couple names (`` `${names.bride} & ${names.groom}` `` — no separate "couple names" field; reuses the existing `text.names` fields also used for the in-game control legend), the formatted wedding date/time (`eventLinks.js`'s `formatEventDateTime(config.text.weddingDateTime)`, hidden if the stored value somehow fails to parse), and the venue address line (`config.text.venueAddress`, hidden entirely when blank — a couple may not want to disclose the venue yet). |
 | `.invite-body` | `config.text.invitation` (the existing freeform wedding-invite copy field) — skipped entirely when blank. |
-| `links` array + `<LinksRow>` | Combines the admin's free-form `config.links` (RSVP, Gift Registry, Song Requests, and anything else — filtered to non-empty `url`s) with two **computed** entries appended after them: `📅 Add to Calendar` (always present — `weddingDateTime` is a required field, so there's always something to build from) and `📍 Venue Maps` (only when `venueAddress` is non-empty). Appended after the free-form list rather than interleaved to a fixed position, since that list's order/labels are entirely admin-controlled and there's no reliable way to know which entry (if any) is "the RSVP one" to insert next to. Rendered through the shared `src/LinksRow.jsx` component (`Game.jsx` no longer has a links row of its own — that was removed in favor of this screen being the only place they show) — same pill styling (`.title-link`/`.title-links` in `Game.css`), no separate CSS. |
-| `.invite-teaser` | The game callout/CTA block — reuses `config.text.title`/`config.text.tagline` (the same fields that used to render on the canvas title screen) rather than adding a separate "teaser copy" field, so an admin editing the existing Title/Tagline inputs in `AdminScreen.jsx` is already editing this. Contains the `▶ START PLAYING` button (`onStartPlaying`). |
+| `pageLinks` / `.title-links` (in-app nav) | Plain `<a href="#/rsvp">` etc. pills for RSVP, Registry, and (when enabled) Songs/Food — **not** run through `LinksRow`/`withProtocol`, which is for *external* links and would mangle a bare hash fragment into `https://#/rsvp`. `useRsvpStatus()` (see `rsvp-pages.md`) drives each entry's `locked` flag (`registry`: not `rsvped`; `songs`/`food`: not `attending`) — a locked entry gets `.is-locked` (dimmed) and a trailing 🔒, but still links through to that page's own `GateNotice` rather than being disabled. Reactive: submitting an RSVP elsewhere in the app updates these immediately, no navigation needed. |
+| `extraLinks` array + `<LinksRow>` | The admin's free-form `config.links` (genuinely external extras — directions, wedding website, hotel block…) plus two **computed** entries appended after them: `📅 Add to Calendar` (always present — `weddingDateTime` is a required field, so there's always something to build from) and `📍 Venue Maps` (only when `venueAddress` is non-empty). Rendered through the shared `src/LinksRow.jsx` component — real external links, `target="_blank"`, run through `withProtocol()`. |
+| `.invite-teaser` | The game callout/CTA block — reuses `config.text.title`/`config.text.tagline` (the same fields that used to render on the canvas title screen) rather than adding a separate "teaser copy" field, so an admin editing the existing Title/Tagline inputs in `AdminScreen.jsx` is already editing this. Contains a `▶ START PLAYING` link (`<a href="#/game">`, plain hash nav — no callback prop any more). |
 
 ## Computed links: `src/eventLinks.js`
 Pure functions, no date/URL library — both links are plain string templates:
@@ -57,10 +59,12 @@ a date. `venueAddress` is optional and defaults to `''`; both `DEFAULT_CONFIG` a
 `structuredClone(DEFAULT_CONFIG)` spread, no override needed) and an empty venue.
 
 ## Relationships / Cross-links
-- Rendered by `Game.jsx` — see [`game-jsx.md`](game-jsx.md).
+- Rendered by `App.jsx` — see `architecture.md`'s "Routing & pages".
 - Reads config from `customizationStore.js` (`text.names`, `text.title`/`tagline`/`invitation`,
-  `text.weddingDateTime`/`venueAddress`, `links`) — see `architecture.md`.
-- Uses `eventLinks.js` (this file) and the shared `LinksRow.jsx`/`linkUtils.js` (also used by
-  `Game.jsx`'s post-game links footer) — see `architecture.md`'s "Opening-page links".
-- The two new `text` fields are editable in `AdminScreen.jsx`'s Text section, right after
-  Title/Tagline.
+  `text.weddingDateTime`/`venueAddress`, `text.songsEnabled`/`foodEnabled`, `links`) — see
+  `architecture.md`.
+- Uses `eventLinks.js` (this file), the shared `LinksRow.jsx`/`linkUtils.js` (external links only —
+  see `architecture.md`'s "Opening-page links"), and `useRsvpStatus.js` (in-app page-link lock
+  state — see [`rsvp-pages.md`](rsvp-pages.md)).
+- The `weddingDateTime`/`venueAddress` fields are editable in `AdminScreen.jsx`'s Text section,
+  right after Title/Tagline; `songsEnabled`/`foodEnabled` are in its Pages section.
