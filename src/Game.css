@@ -116,18 +116,29 @@ body {
   z-index: 21;
 }
 
-.game-menu-dropdown button {
+.game-menu-dropdown button,
+.game-menu-dropdown a {
+  display: block;
   padding: 10px 16px;
   text-align: left;
   background: none;
   border: none;
   color: #fff;
+  text-decoration: none;
   cursor: pointer;
   font-size: 14px;
 }
 
-.game-menu-dropdown button:hover {
+.game-menu-dropdown button:hover,
+.game-menu-dropdown a:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* A nav item for a page that's gated (Registry before any RSVP, Songs/Food
+   before a confirmed "attending" one) — still clickable, landing on that
+   page's own GateNotice explaining why, not disabled outright. */
+.game-menu-dropdown a.is-locked {
+  opacity: 0.55;
 }
 
 /* Everything game-related — board, side panel, on-screen controls, and the
@@ -295,6 +306,13 @@ body {
   color: #ffd700;
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
+}
+
+/* A locked in-app page link (Registry before any RSVP, Songs/Food before a
+   confirmed "attending" one) — still clickable, landing on that page's own
+   GateNotice, so this is a hint, not a disabled state. */
+.title-link.is-locked {
+  opacity: 0.55;
 }
 
 .title-link:hover {

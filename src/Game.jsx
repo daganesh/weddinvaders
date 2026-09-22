@@ -5,28 +5,23 @@ import { useCustomization } from './useCustomization';
 import { getActiveConfig } from './customizationStore';
 import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
-import { withProtocol } from './linkUtils';
-import InviteScreen from './InviteScreen';
-import defaultBannerSrc from './assets/banner-default.svg';
 import './Game.css';
 
 const END_OF_LEVEL_PHASES = new Set(['meeting', 'levelComplete', 'gameComplete', 'lost']);
 
-export default function Game() {
+// The game page's content only — the shared banner/hamburger header lives in
+// PageHeader.jsx now, rendered once by App.jsx above whichever page (this
+// one included) is showing. `active` (true only while the current route is
+// '#/game') replaces the old internal `showInvite` toggle: this component is
+// always mounted by App.jsx (like every other page) so its state — most
+// importantly the running game itself — survives navigating to another page
+// and back, rather than being destroyed and rebuilt.
+export default function Game({ active }) {
   const canvasRef = useRef(null);
   const assetsRef = useAssets();
   const configRef = useCustomization();
 
-  // Phase 1 (InviteScreen, the default view) vs. Phase 2 (this canvas game).
-  // The canvas isn't mounted at all while this is true, so it can't receive
-  // touch input while browsing the invitation card — no extra guard needed.
-  const [showInvite, setShowInvite] = useState(true);
-  // The hamburger menu (Admin / About) and the About modal it opens — plain
-  // local UI state, shown on both phases from the same header row.
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
-
-  const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState(!showInvite);
+  const { getState, startLoop, stopLoop, setRenderCallback, handleAction } = useGameState(active);
 
   // Mirrors of ref-based game state, updated only when they actually change
   // (from the render callback) — game state stays ref-based for 60fps
@@ -52,29 +47,27 @@ export default function Game() {
     });
   }, [setRenderCallback, assetsRef, configRef]);
 
-  // Starts/stops the 60fps loop with the invite/game toggle, rather than
-  // running it unconditionally from mount — this is also what makes "Back to
-  // Invite" a real pause: a mid-run phase like 'playing'/'meeting' ticks its
+  // Starts/stops the 60fps loop with the page's active state, rather than
+  // running it unconditionally from mount — this is what makes navigating
+  // away a real pause: a mid-run phase like 'playing'/'meeting' ticks its
   // timers every frame, so stopping the loop freezes the run in place until
-  // the player returns and it resumes exactly where it left off (see
-  // useGameState.js's `active` gate for the equivalent on keyboard input).
+  // the player returns to this page and it resumes exactly where it left
+  // off (see useGameState.js's `active` gate for the equivalent on keyboard
+  // input).
   useEffect(() => {
-    if (showInvite) return;
+    if (!active) return;
     startLoop();
     return () => stopLoop();
-  }, [showInvite, startLoop, stopLoop]);
+  }, [active, startLoop, stopLoop]);
 
-  // The old canvas-drawn title notice is gone (its content now lives in
-  // InviteScreen, shown first) — "Start Playing" skips straight to
-  // mode-select. Guarded so returning from a later phase (Back to Invite,
-  // then Start Playing again) doesn't reset an in-progress run: START only
-  // makes sense the very first time, while phase is still its initial value.
-  const handleStartPlaying = useCallback(() => {
-    if (getState().phase === 'title') handleAction({ type: 'START' });
-    setShowInvite(false);
-  }, [getState, handleAction]);
-
-  const handleBackToInvite = useCallback(() => setShowInvite(true), []);
+  // The canvas-drawn title notice is gone (its content lives on the
+  // invitation/RSVP pages now) — arriving at this page skips straight to
+  // mode-select. Guarded so navigating away and back doesn't reset an
+  // in-progress run: START only makes sense the very first time, while
+  // phase is still its initial value.
+  useEffect(() => {
+    if (active && getState().phase === 'title') handleAction({ type: 'START' });
+  }, [active, getState, handleAction]);
 
   const handleCanvasClick = useCallback(() => {
     const { phase, mode, soloRole } = getState();
@@ -125,218 +118,127 @@ export default function Game() {
   // Read directly (not via configRef) since this is display-only and refs
   // shouldn't be accessed during render.
   const activeConfig = getActiveConfig();
-  const { brideColor, groomColor, accent } = activeConfig.colors;
   const { bride: brideName, groom: groomName } = activeConfig.text.names;
-  const bannerSrc = activeConfig.images.banner || defaultBannerSrc;
 
-  // No more 'title' phase to exclude here — InviteScreen is the pre-game
-  // screen now, and by the time the canvas ever renders, phase is already
-  // past it (see handleStartPlaying above).
   const showControls = uiPhase !== 'modeSelect';
 
-  const organizerName = activeConfig.text.organizerName.trim();
-  const organizerUrl = activeConfig.text.organizerUrl.trim();
-
   return (
-    <div
-      className="game-wrapper"
-      style={{ '--wv-bride-color': brideColor, '--wv-groom-color': groomColor, '--wv-accent-color': accent }}
-    >
-      <div className={`game-container${showInvite ? '' : ' is-playing'}`}>
-        <div className="game-header-bar">
-          {/* The banner doubles as the "back to invite" link once the game
-              is showing — the only such control above the frame now (a
-              second, equivalent button already exists below on every level
-              boundary, see .end-of-level-banner). Not clickable on the
-              invite screen itself, since that's already where it goes. */}
-          {showInvite ? (
-            <img className="game-banner" src={bannerSrc} alt="Wedding banner" />
-          ) : (
-            <button className="banner-link" onClick={handleBackToInvite} title="Back to invite & details">
-              <img className="game-banner" src={bannerSrc} alt="Wedding banner — back to invite" />
-            </button>
-          )}
+    <>
+    <div className="game-frame">
+      <div className="canvas-wrapper">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={GAME_HEIGHT}
+          onClick={handleCanvasClick}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="game-canvas"
+        />
 
-          <div className="game-menu-anchor">
-            <button className="hamburger-btn" onClick={() => setMenuOpen(o => !o)} title="Menu">
-              ☰
+        {uiPhase === 'modeSelect' && (
+          <div className="mode-select-overlay">
+            <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
+              👰🤵 Couple
             </button>
-            {menuOpen && (
-              <>
-                <div className="game-menu-backdrop" onClick={() => setMenuOpen(false)} />
-                <div className="game-menu-dropdown">
-                  <button onClick={() => { setMenuOpen(false); handleBackToInvite(); }}>
-                    🏠 Invitation
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); handleStartPlaying(); }}>
-                    🎮 Game
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); window.location.hash = '#/admin'; }}>
-                    ⚙ Admin
-                  </button>
-                  <button onClick={() => { setMenuOpen(false); setShowAbout(true); }}>
-                    ℹ️ About
-                  </button>
-                </div>
-              </>
-            )}
+            <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'bride' })}>
+              👰 Solo as {brideName}
+            </button>
+            <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'groom' })}>
+              🤵 Solo as {groomName}
+            </button>
           </div>
-        </div>
-
-        {showInvite ? (
-          <InviteScreen config={activeConfig} onStartPlaying={handleStartPlaying} />
-        ) : (
-          <>
-            {/* Everything game-related — board, side panel, on-screen
-                controls, and the control-legend text — lives inside this one
-                bordered frame; nothing else does. */}
-            <div className="game-frame">
-              <div className="canvas-wrapper">
-                <canvas
-                  ref={canvasRef}
-                  width={CANVAS_WIDTH}
-                  height={GAME_HEIGHT}
-                  onClick={handleCanvasClick}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  className="game-canvas"
-                />
-
-                {uiPhase === 'modeSelect' && (
-                  <div className="mode-select-overlay">
-                    <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
-                      👰🤵 Couple
-                    </button>
-                    <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'bride' })}>
-                      👰 Solo as {brideName}
-                    </button>
-                    <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'groom' })}>
-                      🤵 Solo as {groomName}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* On-screen buttons (visible on touch devices) — sits right
-                  below the board, with the control-legend text right below
-                  that, so the two read as one control strip. */}
-              {showControls && uiMode === 'couple' && (
-                <div className="mobile-controls">
-                  <div className="mobile-player bride-controls">
-                    <div className="ammo-buttons">
-                      {ammoKeys.map(a => (
-                        <button
-                          key={a.id}
-                          className="ammo-btn"
-                          style={{ '--ammo-color': a.color }}
-                          onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'bride', ammoType: a.id })}
-                          title={a.description}
-                        >
-                          {a.label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      className="shoot-btn bride-shoot"
-                      onPointerDown={() => handleAction({ type: 'SHOOT', role: 'bride' })}
-                    >
-                      👰 SHOOT
-                    </button>
-                  </div>
-
-                  <div className="mobile-player groom-controls">
-                    <div className="ammo-buttons">
-                      {ammoKeys.map(a => (
-                        <button
-                          key={a.id}
-                          className="ammo-btn"
-                          style={{ '--ammo-color': a.color }}
-                          onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'groom', ammoType: a.id })}
-                          title={a.description}
-                        >
-                          {a.label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      className="shoot-btn groom-shoot"
-                      onPointerDown={() => handleAction({ type: 'SHOOT', role: 'groom' })}
-                    >
-                      🤵 SHOOT
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {showControls && uiMode === 'solo' && (
-                <div className="solo-controls">
-                  <span className="solo-controls-hint">Swipe canvas to move · Tap to shoot</span>
-                  <button
-                    className="ammo-switch-btn"
-                    onClick={() => handleAction({ type: 'CYCLE_AMMO', role: uiSoloRole, dir: 1 })}
-                  >
-                    🔄 Switch Ammo
-                  </button>
-                </div>
-              )}
-
-              <div className="key-legend">
-                {uiMode === 'couple' ? (
-                  <>
-                    <span>👰 {brideName} — A/D move · S ammo · W shoot</span>
-                    <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</span>
-                  </>
-                ) : uiSoloRole === 'bride' ? (
-                  <span>👰 {brideName} — A/D move · S ammo · W shoot (or swipe/tap)</span>
-                ) : (
-                  <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot (or swipe/tap)</span>
-                )}
-              </div>
-            </div>
-
-            {/* Every level boundary — a level win, a full-game win, or a loss
-                — nudges back to the invite/RSVP, since winning the whole game
-                takes several level clears and most runs will end here rather
-                than at gameComplete. Outside the frame, not overlaid on the
-                canvas, so it never competes with its own click-to-continue. */}
-            {END_OF_LEVEL_PHASES.has(uiPhase) && (
-              <div className="end-of-level-banner">
-                <button className="back-to-invite-btn" onClick={handleBackToInvite}>
-                  💌 Back to Invite &amp; RSVP
-                </button>
-              </div>
-            )}
-          </>
         )}
       </div>
 
-      {showAbout && (
-        <div className="about-modal-overlay" onClick={() => setShowAbout(false)}>
-          <div className="about-modal" onClick={e => e.stopPropagation()}>
-            <h3>About This Game</h3>
-            <p>Made with 🎮 Weddin&apos;Vaders.</p>
-            {(organizerName || organizerUrl) && (
-              <p>
-                Planned by{' '}
-                {organizerUrl ? (
-                  <a
-                    className="about-organizer-link"
-                    href={withProtocol(organizerUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {organizerName || organizerUrl}
-                  </a>
-                ) : (
-                  <strong>{organizerName}</strong>
-                )}
-              </p>
-            )}
-            <button className="about-close" onClick={() => setShowAbout(false)}>Close</button>
+      {/* On-screen buttons (visible on touch devices) — sits right below the
+          board, with the control-legend text right below that, so the two
+          read as one control strip. */}
+      {showControls && uiMode === 'couple' && (
+        <div className="mobile-controls">
+          <div className="mobile-player bride-controls">
+            <div className="ammo-buttons">
+              {ammoKeys.map(a => (
+                <button
+                  key={a.id}
+                  className="ammo-btn"
+                  style={{ '--ammo-color': a.color }}
+                  onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'bride', ammoType: a.id })}
+                  title={a.description}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <button
+              className="shoot-btn bride-shoot"
+              onPointerDown={() => handleAction({ type: 'SHOOT', role: 'bride' })}
+            >
+              👰 SHOOT
+            </button>
+          </div>
+
+          <div className="mobile-player groom-controls">
+            <div className="ammo-buttons">
+              {ammoKeys.map(a => (
+                <button
+                  key={a.id}
+                  className="ammo-btn"
+                  style={{ '--ammo-color': a.color }}
+                  onClick={() => handleAction({ type: 'SELECT_AMMO', role: 'groom', ammoType: a.id })}
+                  title={a.description}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+            <button
+              className="shoot-btn groom-shoot"
+              onPointerDown={() => handleAction({ type: 'SHOOT', role: 'groom' })}
+            >
+              🤵 SHOOT
+            </button>
           </div>
         </div>
       )}
+
+      {showControls && uiMode === 'solo' && (
+        <div className="solo-controls">
+          <span className="solo-controls-hint">Swipe canvas to move · Tap to shoot</span>
+          <button
+            className="ammo-switch-btn"
+            onClick={() => handleAction({ type: 'CYCLE_AMMO', role: uiSoloRole, dir: 1 })}
+          >
+            🔄 Switch Ammo
+          </button>
+        </div>
+      )}
+
+      <div className="key-legend">
+        {uiMode === 'couple' ? (
+          <>
+            <span>👰 {brideName} — A/D move · S ammo · W shoot</span>
+            <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot</span>
+          </>
+        ) : uiSoloRole === 'bride' ? (
+          <span>👰 {brideName} — A/D move · S ammo · W shoot (or swipe/tap)</span>
+        ) : (
+          <span>🤵 {groomName} — ←/→ move · ↑/↓ ammo · Space shoot (or swipe/tap)</span>
+        )}
+      </div>
     </div>
+
+    {/* Every level boundary — a level win, a full-game win, or a loss —
+        nudges back to the invite/RSVP, since winning the whole game takes
+        several level clears and most runs will end here rather than at
+        gameComplete. A sibling of .game-frame, not nested in it — see
+        architecture.md. */}
+    {END_OF_LEVEL_PHASES.has(uiPhase) && (
+      <div className="end-of-level-banner">
+        <a className="back-to-invite-btn" href="#/rsvp">💌 Back to Invite &amp; RSVP</a>
+      </div>
+    )}
+    </>
   );
 }

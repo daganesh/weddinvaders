@@ -1,0 +1,164 @@
+/* Shared look for the new in-app pages (RSVP, Registry, Songs, Food) —
+   solid borders only on real buttons (no dashed lines, no div borders), no
+   gradient fills, and big touch targets/fonts throughout: these pages are
+   filled in by guests of every age, not just players. The game screen and
+   secondary pickers (ammo, mode-select) are intentionally left smaller —
+   see Game.css — this file only covers the guest-facing form pages. */
+
+.page-card {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page-title {
+  font-size: clamp(26px, 6vw, 34px);
+  font-weight: bold;
+  color: #fff;
+  margin: 0;
+}
+
+.page-lead {
+  font-size: clamp(17px, 3.2vw, 19px);
+  line-height: 1.5;
+  color: #e8ecff;
+  margin: 0;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-align: left;
+}
+
+.field-label input[type="text"],
+.field-label input[type="email"],
+.field-label input[type="tel"],
+.field-label textarea {
+  font-size: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-family: inherit;
+}
+
+.field-label textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Big, unmistakable choice buttons instead of a dropdown/select — easy to
+   tap accurately regardless of age or steady-handedness. */
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.choice-btn {
+  flex: 1 1 160px;
+  font-size: 19px;
+  font-weight: bold;
+  padding: 20px 16px;
+  border-radius: 14px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.choice-btn.is-selected {
+  border-color: var(--wv-accent-color, #ffd700);
+  background: rgba(255, 215, 0, 0.16);
+}
+
+/* Guest-count stepper: a big minus/plus pair flanking the number, instead of
+   a bare <input type="number"> whose tiny native spinner is hard to hit. */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.stepper-btn {
+  font-size: 28px;
+  font-weight: bold;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stepper-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  min-width: 48px;
+}
+
+.big-btn {
+  display: inline-block;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 18px 28px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  background: var(--wv-accent-color, #ffd700);
+  color: #1a1a1a;
+  text-decoration: none;
+}
+
+.big-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.big-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.big-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Shown in place of a page's real content while it's gated — Registry until
+   any RSVP is submitted, Songs/Food until the guest confirmed they're
+   attending. Never a dead end: always explains why and points at the RSVP
+   page. */
+.locked-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.locked-notice-icon {
+  font-size: 40px;
+}
