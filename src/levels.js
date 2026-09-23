@@ -6,13 +6,14 @@ import { WEDDING_ITEMS } from './constants';
 //  itemSpeed    pixels/frame for flying items
 //  rowAdvance   seconds between each row step (9 rows, 4 steps to meet → 4×interval)
 //  hasMines     whether 💣 traps can appear
-//  money        starting cash — only actually applied at level 1; from level 2
-//               onward the player's carried-over balance is used instead (see
-//               useGameState.js's getInitialState `carryOverMoney` param), so
-//               this is really just level 1's number plus a documented
-//               fallback for the others (must always be a multiple of $100 —
-//               cash ammo costs $100/shot)
-//  envelopes    starting 💌 envelope ammo — this DOES reset every level
+//  money        cash granted on arriving at this level, ADDED to whatever's left over
+//               from the previous one (see useGameState.js's getInitialState
+//               `carryOverMoney` param) — for Level 1 there's nothing yet to add
+//               to, so this is simply the fresh-game starting balance (must
+//               always be a multiple of $100 — cash ammo costs $100/shot)
+//  envelopes    💌 envelope ammo granted on arriving at this level, same
+//               additive treatment as `money` (`carryOverEnvelopes` param) —
+//               neither resource resets to zero between levels any more
 //
 export const LEVELS = [
   {

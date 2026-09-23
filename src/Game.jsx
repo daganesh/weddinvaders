@@ -4,7 +4,7 @@ import { useAssets }    from './useAssets';
 import { useCustomization } from './useCustomization';
 import { getActiveConfig } from './customizationStore';
 import { render }       from './renderer';
-import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
+import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META, IS_MOBILE_LAYOUT } from './constants';
 import { LEVELS, isLevelComplete } from './levels';
 import './Game.css';
 
@@ -159,9 +159,14 @@ export default function Game({ active }) {
               family — family gives more! Meet in the middle with everything you need
               to win the level.
             </p>
-            <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
-              👰🤵 Couple
-            </button>
+            {/* Couple mode needs two players' worth of on-screen ammo/shoot
+                buttons plus swipe gestures at once — too much to track on a
+                small touch screen, so it's desktop/keyboard-only. */}
+            {!IS_MOBILE_LAYOUT && (
+              <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
+                👰🤵 Couple
+              </button>
+            )}
             <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'solo', soloRole: 'bride' })}>
               👰 Solo as {brideName}
             </button>

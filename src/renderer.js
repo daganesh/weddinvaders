@@ -614,6 +614,27 @@ function drawMeeting(ctx, state, assets, cfg) {
     ctx.globalAlpha = 1;
   }
 
+  // What the next level adds to the carried-over balance — money/envelopes
+  // persist across levels now (see use-game-state.md), so this is a real
+  // top-up, not a reset. Sits in the HUD strip below the play field, same
+  // "appears after 80 frames" gate as the level-complete text above (not the
+  // last level, which has no next level to top up).
+  if (meetingTimer >= 80 && !isLastLevel) {
+    const nextLevel = LEVELS[currentLevel + 1];
+    if (nextLevel) {
+      const tAlpha = Math.min(1, (meetingTimer - 80) / 20);
+      ctx.globalAlpha = tAlpha;
+      ctx.font        = 'bold 13px monospace';
+      ctx.fillStyle   = '#4caf50';
+      ctx.textAlign   = 'center';
+      ctx.fillText(
+        `+$${nextLevel.money} & +${nextLevel.envelopes} 💌 waiting for you!`,
+        GAME_WIDTH / 2, PLAY_HEIGHT + 14
+      );
+      ctx.globalAlpha = 1;
+    }
+  }
+
   // "Press any key" prompt — appears after 110 frames
   if (meetingTimer >= 110) {
     const pAlpha = Math.min(1, (meetingTimer - 110) / 20);
@@ -700,9 +721,13 @@ function drawOverlay(ctx, state, assets, cfg) {
       ctx.fillText(`Next: Lvl ${nextLevel.id} — ${nextText.name}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
       ctx.font = '14px Arial'; ctx.fillStyle = '#aaa';
       ctx.fillText(nextText.subtitle, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 16);
+      // What carries into the next level's balance — see drawMeeting's
+      // identical line for the other route into a new level.
+      ctx.font = 'bold 13px monospace'; ctx.fillStyle = '#4caf50';
+      ctx.fillText(`+$${nextLevel.money} & +${nextLevel.envelopes} 💌 waiting for you!`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 36);
     }
     ctx.font = '18px Arial'; ctx.fillStyle = '#ccc';
-    ctx.fillText('Press any key to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 48);
+    ctx.fillText('Press any key to continue', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 64);
 
   } else if (phase === 'gameComplete') {
     const img = assets?.couple;
