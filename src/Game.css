@@ -356,7 +356,7 @@ body {
 }
 
 .ammo-btn {
-  font-size: 22px;
+  font-size: 26px;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -410,6 +410,11 @@ body {
   font-size: 13px;
 }
 
+.solo-controls-row {
+  display: flex;
+  gap: 10px;
+}
+
 .ammo-switch-btn {
   font-size: 16px;
   font-weight: bold;
@@ -424,6 +429,25 @@ body {
 .ammo-switch-btn:active {
   transform: scale(0.96);
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile equivalent of the desktop "N" key — there's no keyboard to press,
+   so once a level's required items are all acquired this appears next to
+   the Ammo button instead (see Game.jsx). */
+.skip-btn {
+  font-size: 16px;
+  font-weight: bold;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(255, 215, 0, 0.16);
+  color: #ffd700;
+}
+
+.skip-btn:active {
+  transform: scale(0.96);
+  background: rgba(255, 215, 0, 0.28);
 }
 
 @media (max-width: 840px) {

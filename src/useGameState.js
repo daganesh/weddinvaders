@@ -48,13 +48,13 @@ function pickWeighted(pool) {
   return pool[pool.length - 1];
 }
 
-function spawnItem(topRow, bottomRow, level, acquiredItems = []) {
+function spawnItem(topRow, bottomRow, level, acquiredItems = [], elapsedFraction = 1) {
   const minRow = topRow + 1;
   const maxRow = bottomRow - 1;
   if (minRow > maxRow) return null;
 
   // Don't re-spawn purchasable/discount items already acquired — only income & mines keep spawning
-  const spawnPool = getSpawnPool(level).filter(t =>
+  const spawnPool = getSpawnPool(level, elapsedFraction).filter(t =>
     t.incomeType === 'income' || t.incomeType === 'mine' || !acquiredItems.includes(t.id)
   );
   if (spawnPool.length === 0) return null;
@@ -104,7 +104,14 @@ function spawnItem(topRow, bottomRow, level, acquiredItems = []) {
 // starting slot; row-advance/meeting logic below reads `topRole`/`bottomRole`
 // rather than hardcoding groom=top, so this inversion doesn't have to touch
 // the convergence math itself.
-export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null) {
+//
+// `carryOverMoney`, when given, overrides `level.money` — money persists
+// across levels now (an incentive to farm income and spend carefully in the
+// easy early levels, rather than getting a free top-up each time), so every
+// level-advance call site below passes the outgoing level's ending balance
+// here. Left `undefined` for a genuinely fresh game (CHOOSE_MODE/RESTART),
+// where `level.money` is the real starting balance.
+export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney) {
   const idx   = Math.min(levelIndex, LEVELS.length - 1);
   const level = LEVELS[idx];
   const invert  = mode === 'solo' && soloRole === 'groom';
@@ -119,8 +126,8 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
     currentLevel:    idx,
     frame:           0,
     time:            level.gameDuration,
-    money:           level.money,
-    ammo:            { invite: level.invites, heart: level.hearts },
+    money:           carryOverMoney ?? level.money,
+    ammo:            { envelope: level.envelopes },
     discount:        1,
     lives:           3,
     players:         { [topRole]: makePlayer(topRole, true), [bottomRole]: makePlayer(bottomRole, false) },
@@ -177,9 +184,8 @@ export function useGameState(active = true) {
       if (!player.alive) return s;
 
       const ammoType = player.selectedAmmo;
-      if (ammoType === 'cash'   && s.money        < 100) return s;
-      if (ammoType === 'invite' && s.ammo.invite  <= 0)  return s;
-      if (ammoType === 'heart'  && s.ammo.heart   <= 0)  return s;
+      if (ammoType === 'cash'     && s.money         < 100) return s;
+      if (ammoType === 'envelope' && s.ammo.envelope <= 0)  return s;
 
       // Direction depends on which physical slot this role occupies (top
       // shoots down, bottom shoots up), not the role identity itself — in
@@ -203,6 +209,30 @@ export function useGameState(active = true) {
     });
   }, []);
 
+  // Fast-forwards both players one row toward the center — the desktop "N"
+  // key's action, also exposed as a mobile "Skip" button (Game.jsx) once all
+  // required items are acquired, since there's no keyboard to press there.
+  const skipAdvance = useCallback(() => {
+    setState(s => {
+      if (s.phase !== 'playing') return s;
+      const level = LEVELS[s.currentLevel];
+      if (!isLevelComplete(level, s.acquiredItems)) return s;
+      const { topRole, bottomRole } = s;
+      const topRow = s.players[topRole].row;
+      const botRow = s.players[bottomRole].row;
+      if (topRow >= botRow) return s;
+      const newTopRow = topRow + 1;
+      const newBotRow = botRow - 1;
+      const newPlayers = {
+        ...s.players,
+        [topRole]:    { ...s.players[topRole],    row: newTopRow, y: rowToY(newTopRow) },
+        [bottomRole]: { ...s.players[bottomRole], row: newBotRow, y: rowToY(newBotRow) },
+      };
+      const newItems = s.items.filter(it => it.row > newTopRow && it.row < newBotRow);
+      return { ...s, players: newPlayers, items: newItems, rowAdvanceTimer: 0, advanceAnim: 60 };
+    });
+  }, []);
+
   // ── keyboard input ────────────────────────────────────────────────────
   useEffect(() => {
     const scrollKeys = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space']);
@@ -219,7 +249,7 @@ export function useGameState(active = true) {
       if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 80) {
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' });
         } else {
           setState(s => ({ ...s, phase: 'gameComplete' }));
         }
@@ -228,7 +258,7 @@ export function useGameState(active = true) {
 
       if (s.phase === 'levelComplete' && e.type === 'keydown') {
         const nextLevel = s.currentLevel + 1;
-        setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' }); return;
+        setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' }); return;
       }
       if (s.phase === 'gameComplete' && e.type === 'keydown') {
         // Not phase: 'title' — the canvas title screen no longer exists
@@ -244,27 +274,7 @@ export function useGameState(active = true) {
 
       if (e.type === 'keydown') {
         // N: fast-forward row advance when all required items are acquired
-        if (e.code === 'KeyN') {
-          const level = LEVELS[s.currentLevel];
-          if (isLevelComplete(level, s.acquiredItems)) {
-            setState(s => {
-              const { topRole, bottomRole } = s;
-              const topRow = s.players[topRole].row;
-              const botRow = s.players[bottomRole].row;
-              if (topRow >= botRow) return s;
-              const newTopRow = topRow + 1;
-              const newBotRow = botRow - 1;
-              const newPlayers = {
-                ...s.players,
-                [topRole]:    { ...s.players[topRole],    row: newTopRow, y: rowToY(newTopRow) },
-                [bottomRole]: { ...s.players[bottomRole], row: newBotRow, y: rowToY(newBotRow) },
-              };
-              const newItems = s.items.filter(it => it.row > newTopRow && it.row < newBotRow);
-              return { ...s, players: newPlayers, items: newItems, rowAdvanceTimer: 0, advanceAnim: 60 };
-            });
-          }
-          return;
-        }
+        if (e.code === 'KeyN') { skipAdvance(); return; }
 
         // Only the controllable role(s) respond — in solo mode the waiting
         // role's keys are ignored so it stays parked.
@@ -287,7 +297,7 @@ export function useGameState(active = true) {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('keyup',   onKey);
     };
-  }, [active, cycleAmmoFor, shoot]);
+  }, [active, cycleAmmoFor, shoot, skipAdvance]);
 
   // ── main update (runs every frame) ────────────────────────────────────
 
@@ -312,21 +322,25 @@ export function useGameState(active = true) {
       slowTimer   = Math.max(0, slowTimer - 1);
 
       // ── timer & row advance ────────────────────────────────────────────
-      // Speeds up once all required items are in hand (less time to "gear up"
-      // on extras), tempered by a temporary slowdown from the hourglass item.
+      // Both the countdown clock and row-advance speed up once all required
+      // items are in hand — nothing left to do but wait out guests/family for
+      // a required-items level, so let it end sooner instead of dragging —
+      // tempered by a temporary slowdown from the hourglass item (which now
+      // genuinely buys more real time, not just a slower row-advance).
       const requiredDone = isLevelComplete(level, acquiredItems);
       let advanceRate = requiredDone ? ROW_ADVANCE_SPEEDUP : 1;
       if (slowTimer > 0) advanceRate *= 0.5;
 
-      // Once cash, invites, and hearts are all spent, neither player can act
+      // Once cash and envelopes are both spent, neither player can act
       // again — fast-forward to the level's outcome instead of waiting out
-      // the real-time clock.
-      const outOfAmmo = money < 100 && ammo.invite <= 0 && ammo.heart <= 0;
-      const tickInterval = outOfAmmo ? Math.max(1, Math.round(FPS / NO_AMMO_FASTFORWARD)) : FPS;
+      // the real-time clock. Takes priority over the requiredDone speedup.
+      const outOfAmmo = money < 100 && ammo.envelope <= 0;
+      const speedMultiplier = outOfAmmo ? NO_AMMO_FASTFORWARD : advanceRate;
+      const tickInterval = Math.max(1, Math.round(FPS / speedMultiplier));
 
       if (frame % tickInterval === 0) {
         time = Math.max(0, time - 1);
-        rowAdvanceTimer += advanceRate;
+        rowAdvanceTimer += 1;
       }
 
       let newPlayers = players;
@@ -374,7 +388,8 @@ export function useGameState(active = true) {
       // ── item spawn ───────────────────────────────────────────────────
       spawnTimer++;
       if (spawnTimer >= ITEM_SPAWN_FRAMES && items.length < MAX_CONCURRENT_ITEMS) {
-        const it = spawnItem(newPlayers[topRole].row, newPlayers[bottomRole].row, level, acquiredItems);
+        const elapsedFraction = 1 - time / level.gameDuration;
+        const it = spawnItem(newPlayers[topRole].row, newPlayers[bottomRole].row, level, acquiredItems, elapsedFraction);
         if (it) items = [...items, it];
         spawnTimer = 0;
       }
@@ -535,7 +550,7 @@ export function useGameState(active = true) {
         if (s.phase === 'meeting' && s.meetingTimer < 80) break;
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' });
         } else {
           setState({ ...s, phase: 'gameComplete' });
         }
@@ -545,6 +560,8 @@ export function useGameState(active = true) {
         shoot(action.role); break;
       case 'CYCLE_AMMO':
         cycleAmmoFor(action.role, action.dir ?? 1); break;
+      case 'SKIP_ADVANCE':
+        skipAdvance(); break;
       case 'DRAG_MOVE': {
         // Applied immediately (not queued through keysRef/update()'s per-frame
         // moveX) so the player tracks the finger 1:1 — deltaX is already in
@@ -569,7 +586,7 @@ export function useGameState(active = true) {
         })); break;
       default: break;
     }
-  }, [shoot, cycleAmmoFor]);
+  }, [shoot, cycleAmmoFor, skipAdvance]);
 
   return { getState, startLoop, stopLoop, setRenderCallback, handleAction };
 }

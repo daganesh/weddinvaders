@@ -5,6 +5,7 @@ import { useCustomization } from './useCustomization';
 import { getActiveConfig } from './customizationStore';
 import { render }       from './renderer';
 import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META } from './constants';
+import { LEVELS, isLevelComplete } from './levels';
 import './Game.css';
 
 const END_OF_LEVEL_PHASES = new Set(['meeting', 'levelComplete', 'gameComplete', 'lost']);
@@ -31,6 +32,12 @@ export default function Game({ active }) {
   const [uiSoloRole, setUiSoloRole] = useState(null);
   const prevPhaseRef = useRef('title');
 
+  // Mirrors whether this level's required items are all acquired — drives
+  // the mobile "Skip" button (below), the touch equivalent of the desktop
+  // "N" key fast-forward, which only does anything once this is true anyway.
+  const [uiRequiredDone, setUiRequiredDone] = useState(false);
+  const prevRequiredDoneRef = useRef(false);
+
   useEffect(() => {
     setRenderCallback((state) => {
       const canvas = canvasRef.current;
@@ -43,6 +50,13 @@ export default function Game({ active }) {
         setUiPhase(state.phase);
         setUiMode(state.mode);
         setUiSoloRole(state.soloRole);
+      }
+
+      const requiredDone = state.phase === 'playing'
+        && isLevelComplete(LEVELS[state.currentLevel] ?? LEVELS[0], state.acquiredItems);
+      if (requiredDone !== prevRequiredDoneRef.current) {
+        prevRequiredDoneRef.current = requiredDone;
+        setUiRequiredDone(requiredDone);
       }
     });
   }, [setRenderCallback, assetsRef, configRef]);
@@ -141,9 +155,9 @@ export default function Game({ active }) {
           <div className="mode-select-overlay">
             <p className="mode-select-rules">
               Move toward each other, shooting flying items to complete your wedding
-              checklist. 💵 Cash breaks an item open · 💌 Invites bring guests (and gifts!)
-              · 💕 Hearts bring family gifts. Meet in the middle with everything you need
-              to win the level!
+              checklist. 💵 Cash breaks an item open · 💌 Envelopes invite guests and
+              family — family gives more! Meet in the middle with everything you need
+              to win the level.
             </p>
             <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
               👰🤵 Couple
@@ -211,13 +225,25 @@ export default function Game({ active }) {
 
       {showControls && uiMode === 'solo' && (
         <div className="solo-controls">
+          {/* Buttons sit right below the canvas, closer to the player's own
+              corner than the hint text below them, for a faster reaction —
+              see architecture.md's "Site-wide style convention" note on this
+              swap. Skip mirrors the desktop "N" key: there's no keyboard on
+              mobile, so once required items are done it appears here instead. */}
+          <div className="solo-controls-row">
+            <button
+              className="ammo-switch-btn"
+              onClick={() => handleAction({ type: 'CYCLE_AMMO', role: uiSoloRole, dir: 1 })}
+            >
+              🔄 Switch Ammo
+            </button>
+            {uiRequiredDone && (
+              <button className="skip-btn" onClick={() => handleAction({ type: 'SKIP_ADVANCE' })}>
+                ⏩ Skip
+              </button>
+            )}
+          </div>
           <span className="solo-controls-hint">Swipe canvas to move · Tap to shoot</span>
-          <button
-            className="ammo-switch-btn"
-            onClick={() => handleAction({ type: 'CYCLE_AMMO', role: uiSoloRole, dir: 1 })}
-          >
-            🔄 Switch Ammo
-          </button>
         </div>
       )}
 

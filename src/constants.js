@@ -53,46 +53,49 @@ export const ITEM_WIDTH  = IS_MOBILE_PORTRAIT ? 96 : 68;
 export const ITEM_HEIGHT = IS_MOBILE_PORTRAIT ? 74 : 56; // fits in ROW_HEIGHT with a small margin top+bottom
 export const ITEM_SPEED  = 1.5;
 
-// Ammo labels used in HUD / cycling
-export const AMMO_ORDER = ['cash', 'invite', 'heart'];
+// Ammo labels used in HUD / cycling — only two types (feedback: three was
+// confusing, and there was no real reason "guest" and "family" needed
+// separate ammo). 💌 envelope now covers both guest and family targets;
+// which one pays more is a property of the *item* (see WEDDING_ITEMS
+// below), not the ammo.
+export const AMMO_ORDER = ['cash', 'envelope'];
 export const AMMO_META  = {
-  cash:   { label: '💵', color: '#4caf50',  description: 'Cash — pays for items'              },
-  invite: { label: '💌', color: '#e040fb',  description: 'Invite — guests attend & bring gifts' },
-  heart:  { label: '💕', color: '#e91e63',  description: 'Heart — family gives big donations'  },
+  cash:     { label: '💵', color: '#4caf50', description: 'Cash — pays for items' },
+  envelope: { label: '💌', color: '#e91e63', description: 'Envelope — invites guests & family (family gives more)' },
 };
 
 // Item definitions
 // spawnWeight controls relative spawn probability — higher = more common.
+// Purchasable items (rings/officiant/catering/flowers/suit/cake) are weighted
+// lower than before (10 → 6) so they don't crowd out everything else once
+// several are unlocked at once late in a level — see levels.js's
+// getSpawnPool() for the staggered-unlock pacing that works alongside this.
 export const WEDDING_ITEMS = [
   // ── essentials (bought with cash) ──
-  { id: 'rings',        emoji: '💍', label: 'Rings',          price: 500, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 10 },
-  { id: 'officiant',    emoji: '⛪', label: 'Officiant',       price: 300, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 10 },
-  { id: 'catering',     emoji: '🍽️', label: 'Catering',        price: 800, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 10 },
-  // ── income items ──
-  { id: 'guest',        emoji: '👥', label: 'Guest',       price: 0, essential: false, exclusiveTo: null,    incomeType: 'income', incomeAmount: 150, ammoRequired: 'invite', spawnWeight: 5 },
-  { id: 'parent_bride', emoji: '👩‍👧', label: 'Her Family',  price: 0, essential: false, exclusiveTo: 'bride', incomeType: 'income', incomeAmount: 400, ammoRequired: 'heart',  spawnWeight: 2 },
-  { id: 'parent_groom', emoji: '👨‍👦', label: 'His Family',  price: 0, essential: false, exclusiveTo: 'groom', incomeType: 'income', incomeAmount: 400, ammoRequired: 'heart',  spawnWeight: 2 },
+  { id: 'rings',        emoji: '💍', label: 'Rings',          price: 500, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 6 },
+  { id: 'officiant',    emoji: '⛪', label: 'Officiant',       price: 300, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 6 },
+  { id: 'catering',     emoji: '🍽️', label: 'Catering',        price: 800, essential: true,  exclusiveTo: null,    incomeType: null,       spawnWeight: 6 },
+  // ── income items — both need 💌 envelope ammo now; family pays more than
+  // a regular guest, which is the only thing that still distinguishes them ──
+  { id: 'guest',        emoji: '👥', label: 'Guest',       price: 0, essential: false, exclusiveTo: null,    incomeType: 'income', incomeAmount: 150, ammoRequired: 'envelope', spawnWeight: 5 },
+  { id: 'parent_bride', emoji: '👩‍👧', label: 'Her Family',  price: 0, essential: false, exclusiveTo: 'bride', incomeType: 'income', incomeAmount: 400, ammoRequired: 'envelope', spawnWeight: 2 },
+  { id: 'parent_groom', emoji: '👨‍👦', label: 'His Family',  price: 0, essential: false, exclusiveTo: 'groom', incomeType: 'income', incomeAmount: 400, ammoRequired: 'envelope', spawnWeight: 2 },
   // ── special ──
   { id: 'discount',     emoji: '🎀', label: 'Organizer',       price: 200, essential: false, exclusiveTo: null,    incomeType: 'discount', discountPct: 0.3,  ammoRequired: 'cash',  spawnWeight: 3 },
   { id: 'mine',         emoji: '💣', label: 'Trap',            price: 0,   essential: false, exclusiveTo: null,    incomeType: 'mine',     ammoRequired: null,                       spawnWeight: 3 },
   { id: 'hourglass',    emoji: '⏳', label: 'More Time',       price: 150, essential: false, exclusiveTo: null,    incomeType: 'time',     ammoRequired: 'cash',                     spawnWeight: 2 },
   // ── optional purchases ──
-  { id: 'flowers',      emoji: '💐', label: 'Flowers',         price: 200, essential: false, exclusiveTo: 'bride', incomeType: null,       spawnWeight: 10 },
-  { id: 'suit',         emoji: '🤵', label: 'Suit',            price: 250, essential: false, exclusiveTo: 'groom', incomeType: null,       spawnWeight: 10 },
-  { id: 'cake',         emoji: '🎂', label: 'Cake',            price: 350, essential: false, exclusiveTo: null,    incomeType: null,       spawnWeight: 10 },
+  { id: 'flowers',      emoji: '💐', label: 'Flowers',         price: 200, essential: false, exclusiveTo: 'bride', incomeType: null,       spawnWeight: 6 },
+  { id: 'suit',         emoji: '🤵', label: 'Suit',            price: 250, essential: false, exclusiveTo: 'groom', incomeType: null,       spawnWeight: 6 },
+  { id: 'cake',         emoji: '🎂', label: 'Cake',            price: 350, essential: false, exclusiveTo: null,    incomeType: null,       spawnWeight: 6 },
 ];
 
 // Damage each ammo type does per bullet hit
-export const AMMO_DAMAGE = { cash: 100, invite: 1, heart: 1 };
-
-// Starting resources
-export const INITIAL_MONEY  = 2000; // cash is both ammo and money
-export const INITIAL_INVITE = 8;
-export const INITIAL_HEART  = 4;
+export const AMMO_DAMAGE = { cash: 100, envelope: 1 };
 
 // Timing
 export const GAME_DURATION         = 90;  // seconds
 export const ROW_ADVANCE_INTERVAL  = 18;  // seconds between each row advance
-export const ROW_ADVANCE_SPEEDUP   = 2.5; // multiplier once all required items are acquired
+export const ROW_ADVANCE_SPEEDUP   = 2.5; // multiplier (row-advance *and* the time countdown) once all required items are acquired
 export const HOURGLASS_SLOW_SECONDS = 15; // real seconds the hourglass item slows row-advance for
-export const NO_AMMO_FASTFORWARD    = 10; // speed multiplier once cash/invite/heart are all exhausted
+export const NO_AMMO_FASTFORWARD    = 10; // speed multiplier once cash and envelopes are both exhausted
