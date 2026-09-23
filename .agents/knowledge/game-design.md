@@ -65,12 +65,17 @@ covers both; which target pays more is a property of the *item*, not the ammo (s
 | `rings` | 💍 | purchase (required) | Always required |
 | `officiant` | ⛪ | purchase (required) | Level 2+ |
 | `catering` | 🍽️ | purchase (required) | Level 3+ |
-| `flowers` | 💐 | purchase (optional) | Bride-exclusive |
-| `suit` | 🤵 | purchase (optional) | Groom-exclusive |
+| `flowers` | 💐 | purchase (optional) | Bride-exclusive in Couple mode¹ |
+| `suit` | 🤵 | purchase (optional) | Groom-exclusive in Couple mode¹ |
 | `cake` | 🎂 | purchase (optional) | Level 4+ |
 | `guest` | 👥 | income (envelope ammo) | Gives $100–$300 |
-| `parent_bride` | 👩‍👧 | income (envelope ammo) | Bride-exclusive, gives $300–$500 |
-| `parent_groom` | 👨‍👦 | income (envelope ammo) | Groom-exclusive, gives $300–$500 |
+| `parent_bride` | 👩‍👧 | income (envelope ammo) | Bride-exclusive in Couple mode¹, gives $300–$500 |
+| `parent_groom` | 👨‍👦 | income (envelope ammo) | Groom-exclusive in Couple mode¹, gives $300–$500 |
+
+¹ **Not exclusive at all in Solo mode** — with only one shooter, restricting half the field to a role
+nobody is playing would make those items (and, worse, Level 4/5's `suit`+`flowers` *required* items)
+permanently unacquirable. `useGameState.js`'s collision check drops the `exclusiveTo` restriction
+entirely when `mode === 'solo'`, so the solo player can hit and acquire everything.
 | `discount` | 🎀 | discount | Reduces remaining item prices by 30% |
 | `mine` | 💣 | trap | Explodes on contact, costs a life |
 | `hourglass` | ⏳ | time (cash ammo) | Rare; slows row-advance pace *and the time countdown* for `HOURGLASS_SLOW_SECONDS` (15s) |
@@ -215,7 +220,9 @@ through rendering.
 
 ## Key Constraints
 - Items spawn on rows between the two players (never on their rows).
-- `exclusiveTo: 'bride'` items can only be shot by bride; `'groom'` items only by groom.
+- `exclusiveTo: 'bride'` items can only be shot by bride; `'groom'` items only by groom — **Couple
+  mode only**; Solo mode drops this restriction entirely (see "Item Types" above), since there's only
+  one shooter to begin with.
 - Rows advance on `rowAdvanceTimer`; press **N** (when level complete) to fast-forward — on mobile,
   where there's no keyboard, a "⏩ Skip" button appears next to solo mode's Ammo button once the
   level's required items are all acquired, doing the same thing (see `game-jsx.md`).

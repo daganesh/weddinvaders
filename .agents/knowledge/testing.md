@@ -89,6 +89,12 @@ npm run dev
     only "Solo as Bride"/"Solo as Groom", no "👰🤵 Couple" button; above 840px, all three should
     appear. Since this check runs once at page load (`IS_MOBILE_LAYOUT`, `constants.js`), resizing an
     already-open tab won't change it — reload at the target width to test.
+15. **No exclusivity in Solo mode** — playing Solo as Bride, "His Family" (👨‍👦) and "Suit" (🤵,
+    Level 4+) should be hittable and acquirable with the right ammo, same as playing Solo as Groom
+    should let you acquire "Her Family" (👩‍👧) and "Flowers" (💐, Level 4+) — none of these should
+    just flash and stay untouched the way they would (correctly) in Couple mode when the wrong role
+    shoots them. Couple mode itself is unaffected — bride still can't take groom's exclusive items
+    and vice versa.
 
 ## Browser Console Checks
 Open DevTools → Console. After each major change verify:
