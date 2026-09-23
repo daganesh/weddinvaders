@@ -29,10 +29,12 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
   `game-jsx.md`). **The human-controlled character always starts at the bottom row** — playing solo
   as groom inverts which physical corner groom/bride start from (groom takes bride's usual
   bottom-left start and shoots upward instead of down), rather than groom always starting top-right.
-  The row-advance/timer/win-lose rules are otherwise **unchanged** from Couple mode — solo is simply
-  harder because only one shooter is acting against the same pace. See `use-game-state.md`'s
-  `topRole`/`bottomRole` for how the inversion is implemented without hardcoding role names into the
-  convergence math.
+  When a role ends up in the *other* role's usual slot this way, its sprite is drawn rotated 180° —
+  see `renderer.md`'s `drawPlayer` — so it visually faces the direction it's actually shooting rather
+  than the artwork's default (top-slot-facing-down) orientation. The row-advance/timer/win-lose rules
+  are otherwise **unchanged** from Couple mode — solo is simply harder because only one shooter is
+  acting against the same pace. See `use-game-state.md`'s `topRole`/`bottomRole` for how the
+  inversion is implemented without hardcoding role names into the convergence math.
 
 ## Players
 - **Groom** — starts top-right (row 0), moves down. Controls: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot.
@@ -44,11 +46,14 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
   Couple mode's default and Solo-as-Bride's layout — Solo-as-Groom swaps it.
 
 ## Ammo Types
+Only two — feedback on an earlier three-ammo version (separate `invite`/`heart` types for guests vs.
+family) was that it was confusing, with no real payoff for the extra complexity. 💌 envelope now
+covers both; which target pays more is a property of the *item*, not the ammo (see Item Types below).
+
 | Type | Key | Cost | Effect |
 |------|-----|------|--------|
 | 💵 Cash | `cash` | $100/shot (deducted from `money`) | Damages purchasable items (HP = price × priceScale) |
-| 💌 Invite | `invite` | 1 envelope | Hits `guest` items → guest attends, brings $100–$300 random gift |
-| 💕 Heart | `heart` | 1 heart | Hits `parent_bride`/`parent_groom` → family donates $300–$500 random |
+| 💌 Envelope | `envelope` | 1 envelope | Hits `guest` **or** `parent_bride`/`parent_groom` — family pays more (see below) |
 
 ## Item Types (defined in `src/constants.js` `WEDDING_ITEMS` — see [`knowledge/constants.md`](constants.md))
 | ID | Emoji | Type | Notes |
@@ -59,30 +64,65 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
 | `flowers` | 💐 | purchase (optional) | Bride-exclusive |
 | `suit` | 🤵 | purchase (optional) | Groom-exclusive |
 | `cake` | 🎂 | purchase (optional) | Level 4+ |
-| `guest` | 👥 | income (invite ammo) | Gives $100–$300 |
-| `parent_bride` | 👩‍👧 | income (heart ammo) | Bride-exclusive, gives $300–$500 |
-| `parent_groom` | 👨‍👦 | income (heart ammo) | Groom-exclusive, gives $300–$500 |
+| `guest` | 👥 | income (envelope ammo) | Gives $100–$300 |
+| `parent_bride` | 👩‍👧 | income (envelope ammo) | Bride-exclusive, gives $300–$500 |
+| `parent_groom` | 👨‍👦 | income (envelope ammo) | Groom-exclusive, gives $300–$500 |
 | `discount` | 🎀 | discount | Reduces remaining item prices by 30% |
 | `mine` | 💣 | trap | Explodes on contact, costs a life |
-| `hourglass` | ⏳ | time (cash ammo) | Rare; slows row-advance pace for `HOURGLASS_SLOW_SECONDS` (15s) |
+| `hourglass` | ⏳ | time (cash ammo) | Rare; slows row-advance pace *and the time countdown* for `HOURGLASS_SLOW_SECONDS` (15s) |
+
+Family (`parent_bride`/`parent_groom`) and guests both need the same envelope ammo — the only thing
+that still tells them apart is the payout (family gives noticeably more) plus their own icon/label,
+same as before this change. "No ammo distinction between his family and her family" was already true
+even in the old three-ammo version (both required `heart`); what changed is that guests now need the
+same ammo as family too, instead of a separate `invite` type.
 
 ### Spawn Probability
 Every item template has a `spawnWeight` in `WEDDING_ITEMS` (`constants.js`); `spawnItem()`
 (`useGameState.js`'s `pickWeighted()`) does a cumulative-weight random pick, not a uniform one.
-Purchasable items (rings/officiant/catering/flowers/suit/cake) are weight `10` (most common),
-`guest` is `5`, `parent_bride`/`parent_groom` are `2` (rare), `discount`/`mine` are `3`, and the
-new `hourglass` is `2` (rare, same tier as family).
+Purchasable items (rings/officiant/catering/flowers/suit/cake) are weight `6` (lowered from `10` —
+see "Required-Item Pacing" below for why), `guest` is `5`, `parent_bride`/`parent_groom` are `2`
+(rare), `discount`/`mine` are `3`, and `hourglass` is `2` (rare, same tier as family).
+
+### Required-Item Pacing
+Required items used to all be spawnable from level start, and — tied for the highest spawn weight —
+got bought out almost immediately, leaving nothing but guest/family income items flying by for the
+rest of the level (feedback: "very soon you buy all the items you need, and you're left with only
+guests and family... until you finish the level"). `levels.js`'s `getSpawnPool(level,
+elapsedFraction)` now staggers each required item's first appearance across the level instead: the
+item at `required[i]` only becomes spawnable once `elapsedFraction >= i / required.length` (0 at
+level start, 1 at the end) — so `required[0]` is available immediately (Level 1's single required
+item, `rings`, behaves exactly as before) while a level with several required items introduces them
+gradually. Once unlocked, an item keeps spawning until acquired, same as always — only the *first*
+appearance is delayed. Combined with the lower spawnWeight above, this keeps required items from
+front-loading a level or crowding the field once several are unlocked at once.
 
 ## Level Structure (`src/levels.js`)
 5 levels with increasing difficulty:
 
 | Level | Name | Required Items | money | priceScale | itemSpeed | hasMines |
 |-------|------|---------------|-------|-----------|-----------|---------|
-| 1 | Save the Date | rings | $9900 | 0.1× | 1.5 | No |
-| 2 | The Ceremony | rings, officiant | $3000 | 0.4× | 2.0 | No |
-| 3 | The Reception | rings, officiant, catering | $2500 | 0.65× | 2.5 | No |
-| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $2000 | 0.9× | 3.0 | Yes |
-| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1800 | 1.2× | 3.5 | Yes |
+| 1 | Save the Date | rings | $600 | 0.1× | 1.5 | No |
+| 2 | The Ceremony | rings, officiant | $800¹ | 0.4× | 2.0 | No |
+| 3 | The Reception | rings, officiant, catering | $1000¹ | 0.65× | 2.5 | No |
+| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $1200¹ | 0.9× | 3.0 | Yes |
+| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1400¹ | 1.2× | 3.5 | Yes |
+
+¹ Not actually used in normal play — see "Money Persists Across Levels" below. Kept as each level's
+documented fallback starting balance (must be a multiple of $100 either way — cash ammo costs
+$100/shot).
+
+## Money Persists Across Levels
+Money used to reset to each level's `money` field at the start of every level — feedback was that
+starting money was "waaaaayyyy too much" (Level 1 alone was $9900, when its one required item costs
+$50) and that a full reset per level removed any incentive to play carefully or farm income early.
+Now: only Level 1's `money` is the real starting balance for a fresh game (`CHOOSE_MODE`/`RESTART` in
+`useGameState.js`'s `handleAction`); every level-advance call site instead passes the player's
+current balance as `getInitialState`'s `carryOverMoney` param, so whatever's left over (or earned via
+envelope-ammo income) carries straight into the next level. This makes the early, easy levels an
+actual opportunity to build a cushion for the pricier required items later on, rather than something
+to blow through carelessly since the next level "resets" it anyway. Envelope ammo count still resets
+every level (`level.envelopes`) — only money carries over.
 
 ## Win / Lose Conditions
 - **Win level**: All `required` items acquired when players meet (or time runs out with money ≥ 0).
@@ -90,16 +130,20 @@ new `hourglass` is `2` (rare, same tier as family).
 - **Starting money must be a multiple of $100** (cash ammo costs $100/shot — leftover cents are unspendable).
 
 ## Row-Advance Pacing
-- Once all `required` items for the level are acquired, row-advance speeds up by
-  `ROW_ADVANCE_SPEEDUP` (`constants.js`, default `2.5×`) — this limits how long players can keep
-  farming optional items/money instead of finishing the level.
+- Once all `required` items for the level are acquired, **both** row-advance and the time countdown
+  itself speed up by `ROW_ADVANCE_SPEEDUP` (`constants.js`, default `2.5×`) — there's nothing left to
+  do but wait out income items at that point, so the level wraps up sooner instead of dragging (the
+  displayed clock visibly counts down faster, not just the row-advance rate).
 - The `hourglass` item temporarily halves whatever the current rate is (including during the
-  speedup) for `HOURGLASS_SLOW_SECONDS` (15s) — a player-earned reprieve, not a hard freeze. The
-  two effects compose rather than override each other; see `use-game-state.md`.
-- Once cash, invites, and hearts are **all** exhausted (`money < 100` and both ammo counts `0`),
-  neither player can act again — the game fast-forwards the timer/row-advance by
-  `NO_AMMO_FASTFORWARD` (`constants.js`, `10×`) straight to that level's outcome (win or lose)
-  instead of making the player wait out the real-time clock. See `use-game-state.md`.
+  speedup) for `HOURGLASS_SLOW_SECONDS` (15s) — a player-earned reprieve, not a hard freeze, and
+  since it now applies to the same shared rate as the time countdown, it genuinely buys more real
+  time, not just a slower row-advance. The two effects compose rather than override each other; see
+  `use-game-state.md`.
+- Once cash and envelopes are **both** exhausted (`money < 100` and `ammo.envelope <= 0`), neither
+  player can act again — the game fast-forwards the timer/row-advance by `NO_AMMO_FASTFORWARD`
+  (`constants.js`, `10×`) straight to that level's outcome (win or lose) instead of making the player
+  wait out the real-time clock. Takes priority over the requiredDone speedup above. See
+  `use-game-state.md`.
 
 ## Customization Layer
 An admin can override a small set of visuals/text — first step toward a white-label product for
@@ -161,5 +205,7 @@ through rendering.
 ## Key Constraints
 - Items spawn on rows between the two players (never on their rows).
 - `exclusiveTo: 'bride'` items can only be shot by bride; `'groom'` items only by groom.
-- Rows advance on `rowAdvanceTimer`; press **N** (when level complete) to fast-forward.
+- Rows advance on `rowAdvanceTimer`; press **N** (when level complete) to fast-forward — on mobile,
+  where there's no keyboard, a "⏩ Skip" button appears next to solo mode's Ammo button once the
+  level's required items are all acquired, doing the same thing (see `game-jsx.md`).
 - `priceScale` multiplies each item's base `price` — e.g., rings at 0.1× cost $50 instead of $500.
