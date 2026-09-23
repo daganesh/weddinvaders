@@ -22,6 +22,10 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
 
 ## Game Modes
 - **Couple** (default/original) — both bride and groom are controllable, exactly as described below.
+  **Desktop/keyboard only** — the `modeSelect` screen hides this option below `constants.js`'s
+  `IS_MOBILE_LAYOUT` width (840px, matching `Game.css`'s touch-controls breakpoint): two players'
+  worth of on-screen ammo/shoot buttons plus swipe gestures on one small screen was reported as too
+  much to track at once, so a touch-width viewport only offers Solo. See `game-jsx.md`.
 - **Solo** — chosen at the `modeSelect` screen (Couple / Solo as Bride / Solo as Groom), reached from
   the title screen. Only the chosen role can move/shoot/cycle ammo; the other role is a parked,
   occasionally-blinking placeholder at its starting corner (mainly for mobile, where the controls
@@ -100,29 +104,36 @@ front-loading a level or crowding the field once several are unlocked at once.
 ## Level Structure (`src/levels.js`)
 5 levels with increasing difficulty:
 
-| Level | Name | Required Items | money | priceScale | itemSpeed | hasMines |
-|-------|------|---------------|-------|-----------|-----------|---------|
-| 1 | Save the Date | rings | $600 | 0.1× | 1.5 | No |
-| 2 | The Ceremony | rings, officiant | $800¹ | 0.4× | 2.0 | No |
-| 3 | The Reception | rings, officiant, catering | $1000¹ | 0.65× | 2.5 | No |
-| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | $1200¹ | 0.9× | 3.0 | Yes |
-| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | $1400¹ | 1.2× | 3.5 | Yes |
+| Level | Name | Required Items | money¹ | envelopes¹ | priceScale | itemSpeed | hasMines |
+|-------|------|---------------|-------|-----------|-----------|-----------|---------|
+| 1 | Save the Date | rings | $600 | 16 | 0.1× | 1.5 | No |
+| 2 | The Ceremony | rings, officiant | +$800 | +14 | 0.4× | 2.0 | No |
+| 3 | The Reception | rings, officiant, catering | +$1000 | +14 | 0.65× | 2.5 | No |
+| 4 | The Full Wedding | rings, officiant, catering, flowers, suit | +$1200 | +17 | 0.9× | 3.0 | Yes |
+| 5 | Dream Wedding | rings, officiant, catering, flowers, suit, cake | +$1400 | +17 | 1.2× | 3.5 | Yes |
 
-¹ Not actually used in normal play — see "Money Persists Across Levels" below. Kept as each level's
-documented fallback starting balance (must be a multiple of $100 either way — cash ammo costs
-$100/shot).
+¹ Level 1's `money`/`envelopes` are the real starting amounts for a fresh game; every other level's
+are a **top-up added to whatever's carried over** from the previous level, not a reset — see "Money
+and Envelopes Persist Across Levels" below. Money must always be a multiple of $100 either way (cash
+ammo costs $100/shot).
 
-## Money Persists Across Levels
-Money used to reset to each level's `money` field at the start of every level — feedback was that
-starting money was "waaaaayyyy too much" (Level 1 alone was $9900, when its one required item costs
-$50) and that a full reset per level removed any incentive to play carefully or farm income early.
-Now: only Level 1's `money` is the real starting balance for a fresh game (`CHOOSE_MODE`/`RESTART` in
-`useGameState.js`'s `handleAction`); every level-advance call site instead passes the player's
-current balance as `getInitialState`'s `carryOverMoney` param, so whatever's left over (or earned via
-envelope-ammo income) carries straight into the next level. This makes the early, easy levels an
-actual opportunity to build a cushion for the pricier required items later on, rather than something
-to blow through carelessly since the next level "resets" it anyway. Envelope ammo count still resets
-every level (`level.envelopes`) — only money carries over.
+## Money and Envelopes Persist Across Levels
+Both used to reset to each level's `money`/`invites`+`hearts` fields at the start of every level —
+feedback was that starting money was "waaaaayyyy too much" (Level 1 alone was $9900, when its one
+required item costs $50) and that a full reset per level removed any incentive to play carefully or
+farm income early. Now: only Level 1's `money`/`envelopes` are the real starting amounts for a fresh
+game (`CHOOSE_MODE`/`RESTART` in `useGameState.js`'s `handleAction`, which pass no carry-over at all);
+every level-advance call site instead passes the player's current balance and envelope count as
+`getInitialState`'s `carryOverMoney`/`carryOverEnvelopes` params, which are **added to** (not
+replaced by) the new level's `money`/`envelopes` — so whatever's left over (or earned via
+envelope-ammo income) carries straight into the next level, topped up with a fresh grant on arrival.
+This makes the early, easy levels an actual opportunity to build a cushion for the pricier required
+items later on, rather than something to blow through carelessly since the next level "resets" it
+anyway. What the next level will add is shown to the player ahead of time — a
+"+$X & +N 💌 waiting for you!" line on both the `meeting` cutscene (`renderer.js`'s `drawMeeting`)
+and the `levelComplete` overlay (`drawOverlay`), next to the "Next: Level N — name" text, reading
+directly from `LEVELS[currentLevel + 1].money`/`.envelopes` — not shown after the final level, since
+there's no next level to top up.
 
 ## Win / Lose Conditions
 - **Win level**: All `required` items acquired when players meet (or time runs out with money ≥ 0).
