@@ -20,9 +20,10 @@ export default function PageHeader({ config }) {
   // "locked" is a hint, not a block — clicking through still works, landing
   // on that page's own GateNotice, which explains why and links to RSVP.
   // Visible-but-blocked, per the requirement, rather than hidden entirely.
+  // Home and RSVP are a single entry — the home page embeds the RSVP form
+  // directly (see InviteScreen.jsx) rather than linking out to it.
   const navItems = [
-    { id: 'home', href: '#/', label: '🏠 Invitation', locked: false },
-    { id: 'rsvp', href: '#/rsvp', label: '💌 RSVP', locked: false },
+    { id: 'home', href: '#/', label: '💌 Invitation & RSVP', locked: false },
     { id: 'registry', href: '#/registry', label: '🎁 Registry', locked: !rsvped },
     ...(config.text.songsEnabled ? [{ id: 'songs', href: '#/songs', label: '🎵 Songs', locked: !attending }] : []),
     ...(config.text.foodEnabled ? [{ id: 'food', href: '#/food', label: '🍽️ Food', locked: !attending }] : []),

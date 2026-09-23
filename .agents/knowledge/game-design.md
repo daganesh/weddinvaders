@@ -5,9 +5,10 @@ Two-player cooperative Space Invaders-style game. The **Bride** (bottom) and **G
 
 ## Game Phases
 Before any of these, the app shows `InviteScreen.jsx` — a separate pre-game DOM screen (couple
-names/date/venue, the invitation copy, links, and a "Start Playing" CTA), not part of this phase
-machine at all. Its "Start Playing" button skips the canvas `title` phase entirely, going straight
-to `modeSelect` (see `architecture.md`'s "Invitation screen (Phase 1) vs. game view (Phase 2)").
+names/date/venue, the invitation copy, the embedded RSVP form, and `GameTeaser.jsx`'s "▶ START GAME"
+CTA), not part of this phase machine at all. That CTA skips the canvas `title` phase entirely, going
+straight to `modeSelect` (see `architecture.md`'s "Home screen (InviteScreen) and the game page"),
+where a short rules/explanation paragraph is shown once, above the mode buttons.
 
 | Phase | Description |
 |-------|-------------|

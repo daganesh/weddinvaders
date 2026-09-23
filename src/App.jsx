@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { getActiveConfig } from './customizationStore';
 import Game from './Game';
 import InviteScreen from './InviteScreen';
-import RsvpPage from './RsvpPage';
 import RegistryPage from './RegistryPage';
 import SongsPage from './SongsPage';
 import FoodPage from './FoodPage';
@@ -10,13 +9,19 @@ import PageHeader from './PageHeader';
 import AdminScreen from './AdminScreen';
 import './Game.css';
 
-// 'home' is the invitation (InviteScreen) — everything else is a real page
-// reached via a hash route. An unrecognized hash falls back to 'home' rather
-// than a blank screen.
-const ROUTES = new Set(['rsvp', 'registry', 'songs', 'food', 'game', 'admin']);
+// 'home' is the invitation (InviteScreen), which now embeds the RSVP form
+// directly (see InviteScreen.jsx/RsvpPage.jsx) — there's no separate RSVP
+// route to mount. '#/rsvp' is kept as an alias straight to 'home' rather
+// than removed outright, so an already-shared personalized link
+// (?name=...&email=...#/rsvp — the query string survives regardless of which
+// hash it's paired with) still lands somewhere meaningful instead of a dead
+// route. Everything else is a real page reached via a hash route; an
+// unrecognized hash falls back to 'home' too.
+const ROUTES = new Set(['registry', 'songs', 'food', 'game', 'admin']);
 
 function getRoute() {
   const raw = window.location.hash.replace(/^#\/?/, '');
+  if (raw === 'rsvp') return 'home';
   return ROUTES.has(raw) ? raw : 'home';
 }
 
@@ -55,9 +60,6 @@ export default function App() {
 
         <div style={{ display: route === 'home' ? undefined : 'none' }}>
           <InviteScreen config={activeConfig} />
-        </div>
-        <div style={{ display: route === 'rsvp' ? undefined : 'none' }}>
-          <RsvpPage config={activeConfig} />
         </div>
         <div style={{ display: route === 'registry' ? undefined : 'none' }}>
           <RegistryPage config={activeConfig} />

@@ -1,13 +1,17 @@
 import { buildGoogleCalendarUrl, buildVenueMapUrl, formatEventDateTime } from './eventLinks';
 import { LinksRow } from './LinksRow';
 import { useRsvpStatus } from './useRsvpStatus';
+import RsvpPage from './RsvpPage';
+import GameTeaser from './GameTeaser';
 import './InviteScreen.css';
 
-// Phase 1 of the game (see architecture.md's "Invitation screen / game
-// phases" split): a plain DOM "digital wedding card", shown by default
-// instead of the canvas. It carries everything a guest needs before ever
-// touching the game — who/when/where, the essential links, and a teaser for
-// the game itself — with a single CTA into Phase 2 (Game.jsx's canvas view).
+// The home page (see architecture.md's "Home screen" section): a plain DOM
+// "digital wedding card" carrying who/when/where, plus — the actual point of
+// the page — the RSVP form itself at 66% width, so a guest can respond
+// without an extra click-through. A 33% side column previews the game (see
+// GameTeaser.jsx) and offers a way in regardless of RSVP status. Registry/
+// Songs/Food remain separate pages, reached via the nav links below and the
+// header's hamburger, since they only make sense to visit after RSVPing.
 //
 // Deliberately not canvas-drawn: the couple names/date/venue/invitation copy
 // are all admin-customizable, variable-length text that needs to wrap like
@@ -20,14 +24,15 @@ export default function InviteScreen({ config }) {
   const venueAddress = config.text.venueAddress.trim();
   const formattedDate = formatEventDateTime(config.text.weddingDateTime);
 
-  // The in-app pages (RsvpPage/RegistryPage/SongsPage/FoodPage) — plain hash
-  // nav, not run through LinksRow/withProtocol (which is for *external*
-  // admin links and would mangle a bare "#/rsvp" fragment by prepending
-  // "https://"). "Visible but blocked": a locked page still links through,
-  // landing on its own GateNotice rather than being hidden or disabled.
+  // The in-app pages RSVP still unlocks (RegistryPage/SongsPage/FoodPage) —
+  // plain hash nav, not run through LinksRow/withProtocol (which is for
+  // *external* admin links and would mangle a bare "#/registry" fragment by
+  // prepending "https://"). "Visible but blocked": a locked page still links
+  // through, landing on its own GateNotice rather than being hidden or
+  // disabled. RSVP itself isn't listed here any more — it's the form right
+  // below, not a link to somewhere else.
   const { rsvped, attending } = useRsvpStatus();
   const pageLinks = [
-    { id: 'rsvp', href: '#/rsvp', label: '💌 RSVP', locked: false },
     { id: 'registry', href: '#/registry', label: '🎁 Gift Registry', locked: !rsvped },
     ...(config.text.songsEnabled ? [{ id: 'songs', href: '#/songs', label: '🎵 Song Requests', locked: !attending }] : []),
     ...(config.text.foodEnabled ? [{ id: 'food', href: '#/food', label: '🍽️ Food Requests', locked: !attending }] : []),
@@ -63,21 +68,26 @@ export default function InviteScreen({ config }) {
         <p className="invite-body">{config.text.invitation}</p>
       )}
 
-      <div className="title-links">
-        {pageLinks.map(link => (
-          <a key={link.id} className={`title-link${link.locked ? ' is-locked' : ''}`} href={link.href}>
-            {link.label}{link.locked ? ' 🔒' : ''}
-          </a>
-        ))}
+      <div className="home-columns">
+        <div className="home-main">
+          <RsvpPage config={config} />
+        </div>
+        <div className="home-side">
+          <GameTeaser config={config} />
+        </div>
       </div>
+
+      {pageLinks.length > 0 && (
+        <div className="title-links">
+          {pageLinks.map(link => (
+            <a key={link.id} className={`title-link${link.locked ? ' is-locked' : ''}`} href={link.href}>
+              {link.label}{link.locked ? ' 🔒' : ''}
+            </a>
+          ))}
+        </div>
+      )}
 
       <LinksRow links={extraLinks} />
-
-      <div className="invite-teaser">
-        <p className="invite-teaser-title">🎮 {config.text.title}</p>
-        <p className="invite-teaser-tagline">{config.text.tagline}</p>
-        <a className="invite-cta" href="#/game">▶ START PLAYING</a>
-      </div>
     </div>
   );
 }

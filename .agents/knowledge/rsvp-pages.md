@@ -1,10 +1,11 @@
-# Components: RSVP/Registry/Songs/Food pages, `PageHeader`, `GateNotice`
+# Components: RSVP/Registry/Songs/Food pages, `PageHeader`, `GateNotice`, `GameTeaser`
 
 ## Location
 `src/RsvpPage.jsx`, `src/RegistryPage.jsx`, `src/SongsPage.jsx`, `src/FoodPage.jsx`,
-`src/PageHeader.jsx`, `src/GateNotice.jsx`, plus their shared store/hook: `src/rsvpStore.js`,
-`src/useRsvpStatus.js`. Shared look lives in `src/PagesShared.css` (`.page-card`, `.big-btn`,
-`.choice-row`/`.choice-btn`, `.stepper`, `.field-label`, `.locked-notice`).
+`src/PageHeader.jsx`, `src/GateNotice.jsx`, `src/GameTeaser.jsx` (+ `GameTeaser.css`), plus their
+shared store/hook: `src/rsvpStore.js`, `src/useRsvpStatus.js`. Shared look for the form pages lives
+in `src/PagesShared.css` (`.page-card`, `.big-btn`, `.choice-row`/`.choice-btn`, `.stepper`,
+`.field-label`, `.locked-notice`).
 
 ## Purpose
 Together these turn RSVP/Registry/Songs/Food from external links to bundled static demo pages into
@@ -34,23 +35,32 @@ Several components (`PageHeader`'s hamburger, `InviteScreen`'s page-links row,
 `RegistryPage`/`SongsPage`/`FoodPage`'s own gate) read this store during render. That's enough when
 the read happens because of navigation (arriving at a page always re-renders it), but not when a
 *sibling* needs to react to a change — e.g. `RsvpPage` calling `saveRsvpResponse()` doesn't itself
-cause `PageHeader` (a sibling under `App.jsx`, not a parent/child of `RsvpPage`) to re-render, so its
-lock icons would stay stale until the next navigation. `rsvpStore.js` exports a tiny pub-sub
-(`subscribeRsvp(fn)` / internal `notify()`, called by `saveRsvpResponse`/`clearRsvpResponse`) and
-`useRsvpStatus.js` wraps it in a hook — `const { rsvped, attending } = useRsvpStatus();` — mirroring
-`useCustomization.js`'s relationship to `customizationStore.js`. Every component listed above uses
-this hook rather than calling `hasRsvped()`/`isAttending()` directly, so a submission anywhere
-updates lock state everywhere immediately, in the same tab.
+cause `PageHeader` (a sibling of `InviteScreen` under `App.jsx`, not a parent/child of `RsvpPage`) to
+re-render, so its lock icons would stay stale until the next navigation. `rsvpStore.js` exports a
+tiny pub-sub (`subscribeRsvp(fn)` / internal `notify()`, called by
+`saveRsvpResponse`/`clearRsvpResponse`) and `useRsvpStatus.js` wraps it in a hook —
+`const { rsvped, attending } = useRsvpStatus();` — mirroring `useCustomization.js`'s relationship to
+`customizationStore.js`. Every component listed above uses this hook rather than calling
+`hasRsvped()`/`isAttending()` directly, so a submission anywhere updates lock state everywhere
+immediately, in the same tab.
 
 ## `RsvpPage.jsx`
-The `'rsvp'` route. Not gated — always reachable.
+**Not a route of its own** — rendered directly by `InviteScreen.jsx` (`<RsvpPage config={config} />`)
+inside `.home-main`, the ~66%-width column of the home page's `.home-columns` (see
+`invite-screen.md`). This used to be a separate `'rsvp'` route; `App.jsx`'s `getRoute()` still maps a
+bare `#/rsvp` hash onto `'home'` as a compatibility alias (a personalized link's query string —
+`?name=...` — lives in `location.search`, independent of the hash, so it still prefills correctly no
+matter which of the two hashes the link used), but nothing in the app links to `#/rsvp` any more —
+every internal link (`PageHeader`'s hamburger, `GateNotice`'s "Go to RSVP", `Game.jsx`'s "Back to
+Invite & RSVP") points at `#/` directly, since that's where the form actually lives now. The
+component itself is otherwise unchanged and takes no page-specific props beyond `config`:
 - **Prefill via query string**: `?name=...&email=...&phone=...` are read once at first mount
   (`prefillFromQuery()`) and seed the draft — a couple can send each guest a personalized link that
   arrives partly filled in. Only applies when there's no existing saved response; a returning guest
   (or one who already submitted) sees their stored answer instead, never the query string
   overwriting it.
 - **Idempotent on reload**: if `getRsvpResponse()` already has a value at mount, the page renders
-  straight into its own confirmation view instead of a blank form — refreshing the RSVP page after
+  straight into its own confirmation view instead of a blank form — refreshing the home page after
   submitting doesn't lose that state. A "Change my RSVP" button re-enters edit mode, pre-filled from
   the stored response.
 - **Big-choice buttons, not a `<select>`**: attending yes/no is two `.choice-btn`s
@@ -63,7 +73,23 @@ The `'rsvp'` route. Not gated — always reachable.
   `saveRsvpResponse(draft)` and switches to the confirmation view, which shows a tailored heading
   (attending vs. not), and — only when attending — buttons into Songs/Food (each gated on
   `config.text.songsEnabled`/`foodEnabled`) plus an always-shown Registry button (attending isn't
-  required for that one).
+  required for that one). This confirmation view **is** the "confirmation + do you want to request
+  songs/food" screen a guest sees right after submitting — there's no separate screen for it.
+
+## `GameTeaser.jsx`
+`InviteScreen.jsx`'s `.home-side` column (~33% width, next to `RsvpPage` — see above). A small,
+self-contained "here's the game" preview and entry point, reachable regardless of RSVP status (the
+requirement is literally "whether or not the user arrives to the event"):
+- **No real gameplay footage** — there's no bundled GIF or video. Instead, a small CSS animation
+  (`@keyframes` in `GameTeaser.css`) moves the bride/groom portrait images toward each other and
+  back with a floating `💍` between them, evoking the actual game's meet-in-the-middle mechanic
+  without needing an extra asset. Images respect a custom package's overrides the same way
+  `useAssets.js` does: `config.images.bride || <bundled bride-nobg.png>` (and groom). The whole
+  animation is wrapped in `@media (prefers-reduced-motion: no-preference)` — a viewer who's asked
+  for less motion gets the same static scene with no animation property applied at all.
+- Reuses `config.text.title`/`config.text.tagline` (the same fields the canvas title screen and the
+  old `.invite-teaser` used) rather than a separate "teaser copy" field.
+- A `▶ START GAME` link (`<a href="#/game">`) — always active, never gated on `rsvped`/`attending`.
 
 ## `RegistryPage.jsx`
 The `'registry'` route. Gated on `rsvped` (via `useRsvpStatus()`) — shows `<GateNotice reason="rsvp">`
@@ -89,20 +115,23 @@ with an explicit Save button and a brief "saved" confirmation line.
 ## `GateNotice.jsx`
 Shared "locked" view for `RegistryPage`/`SongsPage`/`FoodPage` — `reason="rsvp"` or
 `reason="attending"` selects the explanation copy. Always includes a `💌 Go to RSVP` button
-(`<a href="#/rsvp">`) — never a dead end.
+(`<a href="#/">` — the home page, where the RSVP form now lives) — never a dead end.
 
 ## `PageHeader.jsx`
 The shared chrome rendered once by `App.jsx` above whichever page is showing (every route except
 `admin`) — see `architecture.md`'s "Home screen (InviteScreen) and the game page" for the full
 banner/hamburger/About-modal description. Its hamburger's page list is built from `useRsvpStatus()`
 the same way `InviteScreen`'s page-links row is, so the two never disagree, and both update
-immediately on any RSVP change via the same reactive hook.
+immediately on any RSVP change via the same reactive hook. Home and RSVP are a single entry
+(`💌 Invitation & RSVP`, `href="#/"`) rather than two, since there's no separate RSVP page to link to
+any more.
 
 ## Relationships / Cross-links
-- `App.jsx` renders `PageHeader` once and all of `InviteScreen`/`RsvpPage`/`RegistryPage`/
-  `SongsPage`/`FoodPage`/`Game` (always mounted, one visible via CSS) — see `architecture.md`.
-- `InviteScreen.jsx` renders the same page-links row concept for the home page — see
-  [`invite-screen.md`](invite-screen.md).
+- `App.jsx` renders `PageHeader` once and all of `InviteScreen`/`RegistryPage`/`SongsPage`/
+  `FoodPage`/`Game` (always mounted, one visible via CSS) — see `architecture.md`. `RsvpPage`/
+  `GameTeaser` aren't in that list; they're rendered by `InviteScreen.jsx` itself.
+- `InviteScreen.jsx` renders `RsvpPage`/`GameTeaser` in `.home-columns` and the same page-links row
+  concept (minus RSVP) below them — see [`invite-screen.md`](invite-screen.md).
 - `config.text.registryUrl`/`songsEnabled`/`foodEnabled` are edited in `AdminScreen.jsx`'s Pages
   section; `organizerName`/`organizerUrl` (the About modal's credit line) are in its own section —
   see `architecture.md`.

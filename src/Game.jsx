@@ -139,6 +139,12 @@ export default function Game({ active }) {
 
         {uiPhase === 'modeSelect' && (
           <div className="mode-select-overlay">
+            <p className="mode-select-rules">
+              Move toward each other, shooting flying items to complete your wedding
+              checklist. 💵 Cash breaks an item open · 💌 Invites bring guests (and gifts!)
+              · 💕 Hearts bring family gifts. Meet in the middle with everything you need
+              to win the level!
+            </p>
             <button onClick={() => handleAction({ type: 'CHOOSE_MODE', mode: 'couple' })}>
               👰🤵 Couple
             </button>
@@ -236,7 +242,7 @@ export default function Game({ active }) {
         architecture.md. */}
     {END_OF_LEVEL_PHASES.has(uiPhase) && (
       <div className="end-of-level-banner">
-        <a className="back-to-invite-btn" href="#/rsvp">💌 Back to Invite &amp; RSVP</a>
+        <a className="back-to-invite-btn" href="#/">💌 Back to Invite &amp; RSVP</a>
       </div>
     )}
     </>
