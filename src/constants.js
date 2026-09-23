@@ -13,6 +13,16 @@ const IS_MOBILE_PORTRAIT =
   window.innerWidth <= 640 &&
   window.innerHeight > window.innerWidth;
 
+// Matches Game.css's `@media (max-width: 840px)` breakpoint — the same one
+// that swaps the keyboard-control legend for on-screen touch buttons. Used
+// by Game.jsx to hide the Couple mode-select option below that width: two
+// players' worth of on-screen ammo/shoot buttons plus swipe gestures on one
+// small screen was reported as too much to track at once, so Couple is
+// desktop/keyboard-only — a touch-width viewport only offers Solo. Same
+// load-time-only evaluation as `IS_MOBILE_PORTRAIT` above (no resize
+// listener anywhere in this codebase).
+export const IS_MOBILE_LAYOUT = typeof window !== 'undefined' && window.innerWidth <= 840;
+
 export const GAME_WIDTH   = IS_MOBILE_PORTRAIT ? 460 : 800;
 export const PANEL_WIDTH  = IS_MOBILE_PORTRAIT ? 92  : 110; // side checklist panel
 export const CANVAS_WIDTH = GAME_WIDTH + PANEL_WIDTH; // 552 mobile / 910 desktop

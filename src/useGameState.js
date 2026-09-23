@@ -105,13 +105,16 @@ function spawnItem(topRow, bottomRow, level, acquiredItems = [], elapsedFraction
 // rather than hardcoding groom=top, so this inversion doesn't have to touch
 // the convergence math itself.
 //
-// `carryOverMoney`, when given, overrides `level.money` — money persists
-// across levels now (an incentive to farm income and spend carefully in the
-// easy early levels, rather than getting a free top-up each time), so every
-// level-advance call site below passes the outgoing level's ending balance
-// here. Left `undefined` for a genuinely fresh game (CHOOSE_MODE/RESTART),
-// where `level.money` is the real starting balance.
-export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney) {
+// `carryOverMoney`/`carryOverEnvelopes`, when given, are ADDED to
+// `level.money`/`level.envelopes` rather than replaced by them — neither
+// resource resets between levels any more; each level just grants some more
+// of both on top of whatever's left (an incentive to farm income and spend
+// carefully in the easy early levels, rather than starting over each time),
+// so every level-advance call site below passes the outgoing level's ending
+// balance/ammo here. Left `undefined` for a genuinely fresh game
+// (CHOOSE_MODE/RESTART), where they contribute nothing and `level.money`/
+// `level.envelopes` are simply the real starting amounts.
+export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes) {
   const idx   = Math.min(levelIndex, LEVELS.length - 1);
   const level = LEVELS[idx];
   const invert  = mode === 'solo' && soloRole === 'groom';
@@ -126,8 +129,8 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
     currentLevel:    idx,
     frame:           0,
     time:            level.gameDuration,
-    money:           carryOverMoney ?? level.money,
-    ammo:            { envelope: level.envelopes },
+    money:           (carryOverMoney ?? 0) + level.money,
+    ammo:            { envelope: (carryOverEnvelopes ?? 0) + level.envelopes },
     discount:        1,
     lives:           3,
     players:         { [topRole]: makePlayer(topRole, true), [bottomRole]: makePlayer(bottomRole, false) },
@@ -249,7 +252,7 @@ export function useGameState(active = true) {
       if (s.phase === 'meeting' && e.type === 'keydown' && s.meetingTimer >= 80) {
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money, s.ammo.envelope), phase: 'playing' });
         } else {
           setState(s => ({ ...s, phase: 'gameComplete' }));
         }
@@ -258,7 +261,7 @@ export function useGameState(active = true) {
 
       if (s.phase === 'levelComplete' && e.type === 'keydown') {
         const nextLevel = s.currentLevel + 1;
-        setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' }); return;
+        setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money, s.ammo.envelope), phase: 'playing' }); return;
       }
       if (s.phase === 'gameComplete' && e.type === 'keydown') {
         // Not phase: 'title' — the canvas title screen no longer exists
@@ -550,7 +553,7 @@ export function useGameState(active = true) {
         if (s.phase === 'meeting' && s.meetingTimer < 80) break;
         const nextLevel = s.currentLevel + 1;
         if (nextLevel < LEVELS.length) {
-          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money), phase: 'playing' });
+          setState({ ...getInitialState(nextLevel, s.mode, s.soloRole, s.money, s.ammo.envelope), phase: 'playing' });
         } else {
           setState({ ...s, phase: 'gameComplete' });
         }

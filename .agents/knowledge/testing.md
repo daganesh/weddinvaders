@@ -19,7 +19,7 @@ npm run dev
    🔒 and dimmed style before any RSVP (RSVP itself has no pill — it's the form right there). "START
    GAME" navigates to `#/game` regardless of RSVP status (canvas inside a bordered game frame,
    jumping straight to mode-select — no title screen in between — with a short rules/explanation
-   paragraph shown once above the Couple/Solo/Solo buttons). **Use in-app links to navigate
+   paragraph shown once above the mode buttons). **Use in-app links to navigate
    (click, or the hamburger), not the browser's address bar/`page.goto` in a test script** — a full
    page load resets all component state, which looks identical to a real bug (an in-progress run
    resetting) but isn't one.
@@ -62,10 +62,13 @@ npm run dev
    start appearing only partway into the level (staggered by `elapsedFraction` — see
    `game-design.md`'s "Required-Item Pacing"). You shouldn't be able to acquire every required item
    in the first 10–15 seconds the way an earlier version allowed.
-8c. **Money persists across levels** — note the money total right before a level ends (via the HUD or
-   the "Level Complete" transition), then check the new level's starting money matches what carried
-   over (plus/minus whatever was spent finishing that last level) rather than resetting to a fixed
-   per-level amount. Level 1 itself should start at $600, not the old $9900.
+8c. **Money and envelopes persist across levels, topped up** — note the money/envelope totals right
+   before a level ends, then check the new level's starting totals equal what carried over **plus**
+   that level's grant (e.g. carrying $340 into Level 2 should start Level 2 at $340 + $800 = $1140),
+   not a flat reset to a fixed per-level amount. Level 1 itself should start at $600 / ×16 envelopes
+   (the fresh-game amounts), not the old $9900. The "+$X & +N 💌 waiting for you!" line should appear
+   on both the meeting cutscene and the levelComplete overlay before advancing, showing the exact
+   grant the next level is about to add (not the final level, which has nothing further to add to).
 8d. **Time speeds up after required items are done** — once a level's required items are all
    acquired, the on-screen clock (not just the row-advance rate) should visibly count down faster
    than 1 second per real second.
@@ -79,9 +82,13 @@ npm run dev
     **bottom-left** (bride's usual corner) with its sprite rotated 180° from its normal top-slot
     orientation; the parked bride placeholder at top-right stays in its normal (non-rotated)
     orientation. Solo-as-Bride and Couple mode should look exactly as before (no rotation).
-12. **Game over** — lose all lives → lost overlay → click to restart (this resets money to a fresh
-    Level 1 start, unlike advancing to a next level, which carries the balance forward).
+12. **Game over** — lose all lives → lost overlay → click to restart (this resets money/envelopes to
+    a fresh Level 1 start, unlike advancing to a next level, which carries the balance forward).
 13. **All 5 levels** — play through or use browser console to jump levels if needed.
+14. **Couple mode hidden on mobile** — at a viewport ≤840px wide, the mode-select screen should show
+    only "Solo as Bride"/"Solo as Groom", no "👰🤵 Couple" button; above 840px, all three should
+    appear. Since this check runs once at page load (`IS_MOBILE_LAYOUT`, `constants.js`), resizing an
+    already-open tab won't change it — reload at the target width to test.
 
 ## Browser Console Checks
 Open DevTools → Console. After each major change verify:
