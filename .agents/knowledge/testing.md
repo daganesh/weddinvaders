@@ -12,23 +12,32 @@ npm run dev
 ```
 
 ### Manual test checklist (run after any change)
-1. **Home page (InviteScreen)** — loads at `#/` (or no hash) without errors; couple names/date/page
-   links/teaser visible; page-nav pills for RSVP (always unlocked), Registry, and (if enabled)
-   Songs/Food show a 🔒 and dimmed style before any RSVP. "Start Playing" navigates to `#/game`
-   (canvas inside a bordered game frame, jumping straight to mode-select — no title screen in
-   between). **Use in-app links to navigate (click, or the hamburger), not the browser's address
-   bar/`page.goto` in a test script** — a full page load resets all component state, which looks
-   identical to a real bug (an in-progress run resetting) but isn't one.
-2. **RSVP flow (`#/rsvp`)** — fill name + pick attending/declining (big choice buttons, not a
+1. **Home page (InviteScreen)** — loads at `#/` (or no hash) without errors; couple names/date/venue
+   header, then a two-column area: the RSVP form at ~66% width (left/top), a small animated game
+   preview + "▶ START GAME" at ~33% (right/bottom) — stacks to a single column, RSVP first, under a
+   760px viewport width. Below that, page-nav pills for Registry and (if enabled) Songs/Food show a
+   🔒 and dimmed style before any RSVP (RSVP itself has no pill — it's the form right there). "START
+   GAME" navigates to `#/game` regardless of RSVP status (canvas inside a bordered game frame,
+   jumping straight to mode-select — no title screen in between — with a short rules/explanation
+   paragraph shown once above the Couple/Solo/Solo buttons). **Use in-app links to navigate
+   (click, or the hamburger), not the browser's address bar/`page.goto` in a test script** — a full
+   page load resets all component state, which looks identical to a real bug (an in-progress run
+   resetting) but isn't one.
+2. **RSVP flow** — on the home page: fill name + pick attending/declining (big choice buttons, not a
    dropdown) → guest-count +/- stepper appears only when attending → submit ("💌 SEND WITH LOVE",
-   disabled until name + a choice are set) → confirmation view shows a tailored message and buttons
-   into Songs/Food (attending only, respecting the enabled toggles) and Registry (always). Reload
-   the page — should show the confirmation again, not a blank form. Query-string prefill: visiting
-   `#/rsvp?name=Test&email=a@b.com&phone=555` before any RSVP exists should pre-fill those fields.
+   disabled until name + a choice are set) → confirmation view (in place of the form, still at 66%
+   width) shows a tailored message and buttons into Songs/Food (attending only, respecting the
+   enabled toggles) and Registry (always) — this **is** the "confirmation + do you want to request
+   songs/food" screen, there's no separate one. Reload the page — should show the confirmation
+   again, not a blank form. Query-string prefill: the query string must come *before* the hash (e.g.
+   `?name=Test&email=a@b.com#/` or the equivalent `#/rsvp` alias — `?name=...#/rsvp` also works, but
+   `#/rsvp?name=...` does **not**, since everything after `#` is the hash, not `location.search`)
+   and should pre-fill those fields when no RSVP exists yet.
 2b. **Gating** — before any RSVP: Registry/Songs/Food show a "Not yet!" `GateNotice` linking back to
-   RSVP; the home page's page-nav pills and the hamburger's items show 🔒. After RSVP: Registry
-   unlocks (even if declined); Songs/Food additionally require attending=yes. Lock icons should
-   update **immediately** after submitting, without needing to navigate elsewhere first.
+   the home page ("💌 Go to RSVP", `href="#/"`); the home page's page-nav pills and the hamburger's
+   items show 🔒. After RSVP: Registry unlocks (even if declined); Songs/Food additionally require
+   attending=yes. Lock icons should update **immediately** after submitting, without needing to
+   navigate elsewhere first.
 2c. **Songs/Food pages** — add/remove a song request; save food/allergy notes and see the
    confirmation line. Toggling `songsEnabled`/`foodEnabled` off in Admin's Pages section should hide
    the corresponding page-nav pill/menu item and show a plain "not collecting this" message if
@@ -36,7 +45,8 @@ npm run dev
 2d. **Registry** — set a Registry URL in Admin's Pages section; verify the unlocked page's button
    opens it in a new tab (via `withProtocol()` — a bare domain gets `https://` prepended).
 3. **Header** — the "☰" menu (sticky — present on every page, stays visible while scrolling) lists
-   every page plus Admin/About; clicking the banner navigates home. About opens a modal with a
+   "💌 Invitation & RSVP" (one entry, not two) plus every other page and Admin/About; clicking the
+   banner navigates home. About opens a modal with a
    fixed credit line, plus an organizer link/name when set in Admin's "About / Organizer Credit"
    section — verify it closes via its Close button and via clicking outside it.
 4. **Player movement** — Groom: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot. Bride: A/D move, W shoot, S cycle ammo.

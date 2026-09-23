@@ -18,8 +18,8 @@ Space Invaders-style cooperative two-player browser game built with React + Vite
 | [`knowledge/use-game-state.md`](knowledge/use-game-state.md) | `useGameState()` — `src/useGameState.js` | Core game-logic hook: state, input, 60fps update loop, collisions, phase transitions |
 | [`knowledge/renderer.md`](knowledge/renderer.md) | `render()` + draw functions — `src/renderer.js` | All canvas drawing, pure `(ctx, state, assets) → void` |
 | [`knowledge/game-jsx.md`](knowledge/game-jsx.md) | `Game` — `src/Game.jsx` | React shell orchestrating hooks, canvas, and controls |
-| [`knowledge/invite-screen.md`](knowledge/invite-screen.md) | `InviteScreen` — `src/InviteScreen.jsx` | Home-page DOM screen (couple info, page nav, teaser CTA) |
-| [`knowledge/rsvp-pages.md`](knowledge/rsvp-pages.md) | `RsvpPage`/`RegistryPage`/`SongsPage`/`FoodPage`/`PageHeader`/`GateNotice` + `rsvpStore.js`/`useRsvpStatus.js` | The working RSVP form, the local-only RSVP/attendance gate, and the pages it unlocks |
+| [`knowledge/invite-screen.md`](knowledge/invite-screen.md) | `InviteScreen` — `src/InviteScreen.jsx` | Home-page DOM screen (couple info, embedded RSVP form + game teaser, page nav) |
+| [`knowledge/rsvp-pages.md`](knowledge/rsvp-pages.md) | `RsvpPage`/`RegistryPage`/`SongsPage`/`FoodPage`/`PageHeader`/`GateNotice`/`GameTeaser` + `rsvpStore.js`/`useRsvpStatus.js` | The working RSVP form, the local-only RSVP/attendance gate, the pages it unlocks, and the game-preview side panel |
 | [`knowledge/constants.md`](knowledge/constants.md) | `src/constants.js` | Shared dimensions, timing, `WEDDING_ITEMS`/`AMMO_META` schema (highest fan-in module in the repo) |
 
 ## Skill Files
