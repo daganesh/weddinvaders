@@ -98,7 +98,20 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
   const w = PLAYER_WIDTH, h = PLAYER_HEIGHT;
   const s = PLAYER_WIDTH / 62; // rescales fallback/label sizes with a larger mobile sprite
 
+  // Groom's natural home is the top slot (shooting down); bride's is the
+  // bottom slot (shooting up). Solo-as-groom inverts which role occupies
+  // which slot (see useGameState.js's getInitialState) so the human always
+  // starts at the bottom — when that happens, the sprite is drawn upside
+  // down (rotated 180°) so it visually faces the direction it's actually
+  // shooting, instead of the artwork's default orientation.
+  const inverted = isGroom !== isTop;
+
   ctx.save();
+  if (inverted) {
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate(Math.PI);
+    ctx.translate(-(x + w / 2), -(y + h / 2));
+  }
   if (waiting && frame % 200 < 10) ctx.globalAlpha = 0.35;
   if (img) {
     drawImageContain(ctx, img, x, y, w, h);
@@ -114,12 +127,14 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
 
   if (waiting) return;
 
-  // Ammo label: below sprite for the top slot, above sprite for the bottom slot
+  // Ammo label: below sprite for the top slot, above sprite for the bottom
+  // slot — slightly larger than before so how much ammo is selected/left
+  // reads at a glance (never rotated with the sprite; it's a UI label).
   const ammoMeta = AMMO_META[player.selectedAmmo];
-  ctx.font      = `${13 * s}px monospace`;
+  ctx.font      = `${16 * s}px monospace`;
   ctx.textAlign = 'center';
   ctx.fillStyle = ammoMeta.color;
-  ctx.fillText(ammoMeta.label, x + w / 2, isTop ? y + h + 14 * s : y - 4 * s);
+  ctx.fillText(ammoMeta.label, x + w / 2, isTop ? y + h + 16 * s : y - 5 * s);
 }
 
 // ── bullets ──────────────────────────────────────────────────────────────────
@@ -207,10 +222,11 @@ function drawItem(ctx, item, itemImg) {
   } else if (incomeType === 'income') {
     ctx.font = `bold ${10 * s}px monospace`; ctx.fillStyle = '#4caf50'; ctx.textAlign = 'center';
     ctx.fillText(`+$${incomeAmount}`, x + ITEM_WIDTH / 2, y + ITEM_HEIGHT - 3 * s);
-    // Ammo-hint badge (top-right corner)
-    const ammoHint = (templateId === 'parent_bride' || templateId === 'parent_groom') ? '💕' : '💌';
+    // Ammo-hint badge (top-right corner) — always 💌 now that one ammo type
+    // (envelope) covers both guest and family targets; which one this is
+    // (and that family pays more) is already conveyed by the icon/label above.
     ctx.font = `${10 * s}px Arial`;
-    ctx.fillText(ammoHint, x + ITEM_WIDTH - 9 * s, y + 11 * s);
+    ctx.fillText('💌', x + ITEM_WIDTH - 9 * s, y + 11 * s);
 
   } else if (incomeType === 'mine') {
     ctx.font = `bold ${10 * s}px monospace`; ctx.fillStyle = '#f44336'; ctx.textAlign = 'center';
@@ -434,15 +450,15 @@ function drawHUD(ctx, state) {
   ctx.fillStyle = money < 200 ? '#f44336' : '#4caf50';
   ctx.fillText(`💰 $${Math.floor(money)}`, GAME_WIDTH - 10, hudY + 20);
 
-  ctx.font = '13px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#aaa';
-  ctx.fillText(`💌×${ammo.invite}  💕×${ammo.heart}`, 10, hudY + 44);
+  ctx.font = 'bold 15px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#aaa';
+  ctx.fillText(`💌×${ammo.envelope}`, 10, hudY + 44);
 
   const bMeta = AMMO_META[players.bride.selectedAmmo];
-  ctx.font = 'bold 13px monospace'; ctx.fillStyle = bMeta.color; ctx.textAlign = 'left';
-  ctx.fillText(`👰 ${bMeta.label}`, 130, hudY + 44);
+  ctx.font = 'bold 15px monospace'; ctx.fillStyle = bMeta.color; ctx.textAlign = 'left';
+  ctx.fillText(`👰 ${bMeta.label}`, 90, hudY + 44);
 
   const gMeta = AMMO_META[players.groom.selectedAmmo];
-  ctx.font = 'bold 13px monospace'; ctx.fillStyle = gMeta.color; ctx.textAlign = 'right';
+  ctx.font = 'bold 15px monospace'; ctx.fillStyle = gMeta.color; ctx.textAlign = 'right';
   ctx.fillText(`${gMeta.label} 🤵`, GAME_WIDTH - 10, hudY + 44);
 
   if (discount < 1) {

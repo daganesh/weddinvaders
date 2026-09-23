@@ -6,9 +6,14 @@ import { WEDDING_ITEMS } from './constants';
 //  itemSpeed    pixels/frame for flying items
 //  rowAdvance   seconds between each row step (9 rows, 4 steps to meet → 4×interval)
 //  hasMines     whether 💣 traps can appear
+//  money        starting cash — only actually applied at level 1; from level 2
+//               onward the player's carried-over balance is used instead (see
+//               useGameState.js's getInitialState `carryOverMoney` param), so
+//               this is really just level 1's number plus a documented
+//               fallback for the others (must always be a multiple of $100 —
+//               cash ammo costs $100/shot)
+//  envelopes    starting 💌 envelope ammo — this DOES reset every level
 //
-//  money must always be a multiple of $100 (cash ammo costs $100/shot)
-
 export const LEVELS = [
   {
     id:           1,
@@ -16,13 +21,12 @@ export const LEVELS = [
     subtitle:     'Just the basics — one ring to rule them all!',
     required:     ['rings'],
     optional:     ['guest', 'cake', 'parent_bride', 'parent_groom', 'hourglass'],
-    money:        9900,   // multiple of $100
+    money:        600,    // was 9900 — way more than a single $50 ring could ever need
     priceScale:   0.1,    // rings cost $50 — one cash shot buys it
     itemSpeed:    1.5,    // snappy intro pace
     rowAdvance:   60,     // rows advance once per minute
     gameDuration: 300,    // 5 minutes — no pressure
-    invites:      12,
-    hearts:       4,
+    envelopes:    16,
     hasMines:     false,
   },
   {
@@ -31,13 +35,12 @@ export const LEVELS = [
     subtitle:     'Someone needs to officiate this thing.',
     required:     ['rings', 'officiant'],
     optional:     ['guest', 'suit', 'flowers', 'parent_bride', 'parent_groom', 'hourglass'],
-    money:        3000,
+    money:        800,
     priceScale:   0.4,
     itemSpeed:    2.0,
     rowAdvance:   30,
     gameDuration: 150,
-    invites:      10,
-    hearts:       4,
+    envelopes:    14,
     hasMines:     false,
   },
   {
@@ -46,13 +49,12 @@ export const LEVELS = [
     subtitle:     'You have to feed your guests!',
     required:     ['rings', 'officiant', 'catering'],
     optional:     ['guest', 'suit', 'flowers', 'cake', 'parent_bride', 'parent_groom', 'hourglass'],
-    money:        2500,
+    money:        1000,
     priceScale:   0.65,
     itemSpeed:    2.5,
     rowAdvance:   24,
     gameDuration: 110,
-    invites:      10,
-    hearts:       4,
+    envelopes:    14,
     hasMines:     false,
   },
   {
@@ -61,13 +63,12 @@ export const LEVELS = [
     subtitle:     'Fashion matters. So does cake.',
     required:     ['rings', 'officiant', 'catering', 'flowers', 'suit'],
     optional:     ['guest', 'parent_bride', 'parent_groom', 'cake', 'discount', 'hourglass'],
-    money:        2000,
+    money:        1200,
     priceScale:   0.9,
     itemSpeed:    3.0,
     rowAdvance:   20,
     gameDuration: 95,
-    invites:      12,
-    hearts:       5,
+    envelopes:    17,
     hasMines:     true,
   },
   {
@@ -76,21 +77,35 @@ export const LEVELS = [
     subtitle:     'The whole package. Watch out for traps!',
     required:     ['rings', 'officiant', 'catering', 'flowers', 'suit', 'cake'],
     optional:     ['guest', 'parent_bride', 'parent_groom', 'discount', 'hourglass'],
-    money:        1800,
+    money:        1400,
     priceScale:   1.2,
     itemSpeed:    3.5,
     rowAdvance:   16,
     gameDuration: 80,
-    invites:      12,
-    hearts:       5,
+    envelopes:    17,
     hasMines:     true,
   },
 ];
 
-// Returns the subset of WEDDING_ITEMS that can spawn in this level
-export function getSpawnPool(level) {
-  const allowed = new Set([...level.required, ...level.optional]);
+// Returns the subset of WEDDING_ITEMS that can spawn right now.
+//
+// Required items used to all be spawnable from the very first frame — with
+// spawnWeight tied with the optional purchases, they got bought out almost
+// immediately, leaving nothing but income items (guest/family) flying by for
+// the rest of the level. `elapsedFraction` (0 at level start, 1 at the end —
+// see useGameState.js's update()) staggers each required item's first
+// appearance across the level instead: the item at `required[i]` only
+// becomes spawnable once `elapsedFraction >= i / required.length`, so
+// `required[0]` is available immediately (a single-required-item level like
+// Level 1 behaves exactly as before) while a level with several required
+// items spreads them out — each one keeps spawning once unlocked, same as
+// before, just introduced gradually rather than all at once.
+export function getSpawnPool(level, elapsedFraction = 1) {
+  const allowed = new Set(level.optional);
   if (level.hasMines) allowed.add('mine');
+  level.required.forEach((id, i) => {
+    if (elapsedFraction >= i / level.required.length) allowed.add(id);
+  });
   return WEDDING_ITEMS.filter(w => allowed.has(w.id));
 }
 
