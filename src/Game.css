@@ -232,6 +232,22 @@ body {
   pointer-events: none;
 }
 
+/* The rules/explanation shown once, the first time a guest reaches the game
+   (this overlay only appears before the very first level — see Game.jsx's
+   START-dispatch effect). Sits in the gap between the canvas-drawn "Choose
+   Your Game Mode" heading (renderer.js's drawModeSelect) and the mode
+   buttons below. */
+.mode-select-rules {
+  pointer-events: none;
+  max-width: 380px;
+  margin: 0 0 4px;
+  padding: 0 16px;
+  color: #ddd;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .mode-select-overlay button {
   pointer-events: auto;
   font-size: 16px;

@@ -1,0 +1,116 @@
+.game-teaser {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255, 215, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-teaser-stage {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  border-radius: 10px;
+  background: #0d1a33;
+  overflow: hidden;
+}
+
+.game-teaser-sprite {
+  position: absolute;
+  width: 46px;
+  height: auto;
+  object-fit: contain;
+}
+
+.game-teaser-bride {
+  left: 8px;
+  bottom: 6px;
+}
+
+.game-teaser-groom {
+  right: 8px;
+  top: 6px;
+}
+
+.game-teaser-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 20px;
+  transform: translate(-50%, -50%);
+}
+
+/* The approach/retreat + float loops are purely decorative, so they're
+   opt-in via prefers-reduced-motion rather than always running — a viewer
+   who's asked for less motion gets the same scene, just static. */
+@media (prefers-reduced-motion: no-preference) {
+  .game-teaser-bride {
+    animation: game-teaser-approach-bride 2.4s ease-in-out infinite alternate;
+  }
+
+  .game-teaser-groom {
+    animation: game-teaser-approach-groom 2.4s ease-in-out infinite alternate;
+  }
+
+  .game-teaser-item {
+    animation: game-teaser-float 1.6s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes game-teaser-approach-bride {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(28px, -14px); }
+}
+
+@keyframes game-teaser-approach-groom {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(-28px, 14px); }
+}
+
+@keyframes game-teaser-float {
+  from { transform: translate(-50%, -50%) translateY(-4px); }
+  to   { transform: translate(-50%, -50%) translateY(4px); }
+}
+
+.game-teaser-title {
+  margin: 0;
+  font-weight: bold;
+  font-family: monospace;
+  color: #fff;
+  font-size: clamp(15px, 3.2vw, 17px);
+  text-align: center;
+}
+
+.game-teaser-tagline {
+  margin: 0;
+  color: #ccc;
+  font-size: 13px;
+  text-align: center;
+}
+
+.game-teaser-cta {
+  display: inline-block;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 12px 20px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  background: var(--wv-accent-color, #ffd700);
+  color: #1a1a1a;
+  text-decoration: none;
+  text-align: center;
+}
+
+.game-teaser-cta:hover {
+  filter: brightness(1.08);
+}
+
+.game-teaser-cta:active {
+  transform: scale(0.97);
+}

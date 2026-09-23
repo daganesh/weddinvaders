@@ -1,6 +1,5 @@
 .invite-screen {
   width: 100%;
-  max-width: 480px;
   margin: 0 auto;
   padding: 24px 20px 28px;
   border-radius: 16px;
@@ -12,10 +11,16 @@
   gap: 14px;
 }
 
+/* The header/invitation copy stay a narrow, readable column even though
+   .invite-screen itself grew wide enough to fit .home-columns' 66/33 split
+   below — .game-container's own 820px cap is the outer ceiling either way. */
 .invite-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .invite-couple-names {
@@ -40,56 +45,37 @@
 }
 
 .invite-body {
-  margin: 0;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
   color: #e8ecff;
   font-size: 16px;
   line-height: 1.6;
 }
 
-.invite-teaser {
-  margin-top: 6px;
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(255, 215, 0, 0.14);
+/* RSVP (.home-main, ~66%) next to a game preview/CTA (.home-side, ~33%) —
+   see InviteScreen.jsx and GameTeaser.jsx. Stacks to a single column (RSVP
+   first) below the breakpoint, where a fixed side-by-side split would just
+   squeeze both halves too narrow to use. */
+.home-columns {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 20px;
+  align-items: flex-start;
+  width: 100%;
 }
 
-.invite-teaser-title {
-  margin: 0;
-  font-weight: bold;
-  font-family: monospace;
-  color: #fff;
-  font-size: clamp(17px, 3.8vw, 20px);
+.home-main {
+  flex: 2 1 0;
+  min-width: 0;
 }
 
-.invite-teaser-tagline {
-  margin: 0;
-  color: #ccc;
-  font-size: 15px;
+.home-side {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-.invite-cta {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 20px;
-  font-weight: bold;
-  padding: 16px 36px;
-  border-radius: 30px;
-  border: none;
-  cursor: pointer;
-  background: var(--wv-accent-color, #ffd700);
-  color: #1a1a1a;
-  text-decoration: none;
-  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.35);
-}
-
-.invite-cta:hover {
-  filter: brightness(1.08);
-}
-
-.invite-cta:active {
-  transform: scale(0.97);
+@media (max-width: 760px) {
+  .home-columns {
+    flex-direction: column;
+  }
 }

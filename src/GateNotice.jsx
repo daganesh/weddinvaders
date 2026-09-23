@@ -13,7 +13,7 @@ export default function GateNotice({ reason }) {
           ? "This is just for guests who've confirmed they're coming — RSVP and let us know you'll be there to unlock it."
           : 'Please RSVP first so we know who to unlock this for.'}
       </p>
-      <a className="big-btn" href="#/rsvp">💌 Go to RSVP</a>
+      <a className="big-btn" href="#/">💌 Go to RSVP</a>
     </div>
   );
 }
