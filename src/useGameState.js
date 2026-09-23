@@ -433,7 +433,12 @@ export function useGameState(active = true) {
 
           hit = true;
           const ammoOK   = !it.ammoRequired || it.ammoRequired === b.ammoType;
-          const playerOK = !it.exclusiveTo   || it.exclusiveTo  === b.role;
+          // In solo mode there's only one shooter, so "her family"/"his
+          // family" (and bride-only flowers / groom-only suit) shouldn't be
+          // unhittable just because they belong to the role nobody is
+          // playing — the solo player can acquire everything. Couple mode
+          // keeps the original split.
+          const playerOK = mode === 'solo' || !it.exclusiveTo || it.exclusiveTo === b.role;
 
           if (!ammoOK || !playerOK) {
             items[ii] = { ...it, flashTimer: 12 };
