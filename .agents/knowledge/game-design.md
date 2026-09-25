@@ -18,7 +18,8 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
 | `meeting` | Players reached the same row → couple image shown, then level result |
 | `levelComplete` | Time ran out with all required items bought → next level |
 | `gameComplete` | All 5 levels cleared |
-| `lost` | Ran out of lives, money went negative, or met without completing requirements |
+| `levelFailed` | Failed this level's objective (see "Win / Lose Conditions" below) with at least one life left → costs one life, retries the **same** level on a keypress |
+| `lost` | Ran out of lives entirely — the whole game ends |
 
 ## Game Modes
 - **Couple** (default/original) — both bride and groom are controllable, exactly as described below.
@@ -98,13 +99,23 @@ Required items used to all be spawnable from level start, and — tied for the h
 got bought out almost immediately, leaving nothing but guest/family income items flying by for the
 rest of the level (feedback: "very soon you buy all the items you need, and you're left with only
 guests and family... until you finish the level"). `levels.js`'s `getSpawnPool(level,
-elapsedFraction)` now staggers each required item's first appearance across the level instead: the
-item at `required[i]` only becomes spawnable once `elapsedFraction >= i / required.length` (0 at
-level start, 1 at the end) — so `required[0]` is available immediately (Level 1's single required
-item, `rings`, behaves exactly as before) while a level with several required items introduces them
+elapsedFraction)` staggers each required item's first appearance across the level instead: the item
+at `required[i]` only becomes spawnable once `elapsedFraction >= i / required.length` (0 at level
+start, 1 at the end) — so `required[0]` is available immediately (Level 1's single required item,
+`rings`, behaves exactly as before) while a level with several required items introduces them
 gradually. Once unlocked, an item keeps spawning until acquired, same as always — only the *first*
 appearance is delayed. Combined with the lower spawnWeight above, this keeps required items from
 front-loading a level or crowding the field once several are unlocked at once.
+
+That fraction is capped at `MAX_REQUIRED_GATE_FRACTION` (0.3) so it can't push a required item too
+far into the level: without the cap, the *last* required item on an N-required level doesn't unlock
+until `(N-1)/N` of the level's duration — Level 2's `officiant` (2 required items) didn't appear
+until 50% of its 150s duration (75s in), leaving a long guests-only stretch with nothing else to
+shoot for (feedback: "one of the items appears only very late in the game, after a long time of no
+items at all"). Capping the threshold at 30% keeps the stagger (so a level with several required
+items still doesn't dump them all at once) while guaranteeing every required item is spawnable well
+before a level's back half, whatever `required.length` is — for Level 2 specifically, `officiant`
+now unlocks at 45s instead of 75s.
 
 ## Level Structure (`src/levels.js`)
 5 levels with increasing difficulty:
@@ -131,7 +142,11 @@ game (`CHOOSE_MODE`/`RESTART` in `useGameState.js`'s `handleAction`, which pass 
 every level-advance call site instead passes the player's current balance and envelope count as
 `getInitialState`'s `carryOverMoney`/`carryOverEnvelopes` params, which are **added to** (not
 replaced by) the new level's `money`/`envelopes` — so whatever's left over (or earned via
-envelope-ammo income) carries straight into the next level, topped up with a fresh grant on arrival.
+income) carries straight into the next level, topped up with a fresh grant on arrival. Retrying a
+*failed* level (`RETRY_LEVEL`, see "Win / Lose Conditions" below) is the one exception: it passes
+back the same `carryOverMoney`/`carryOverEnvelopes` the failed attempt itself started with (saved as
+`levelStartMoney`/`levelStartEnvelopes`), recreating that level's original starting balance rather
+than whatever was left after the failed attempt's spending.
 This makes the early, easy levels an actual opportunity to build a cushion for the pricier required
 items later on, rather than something to blow through carelessly since the next level "resets" it
 anyway. What the next level will add is shown to the player ahead of time — a
@@ -142,8 +157,31 @@ there's no next level to top up.
 
 ## Win / Lose Conditions
 - **Win level**: All `required` items acquired when players meet (or time runs out with money ≥ 0).
-- **Lose**: Lives reach 0, OR players meet without all required items, OR money goes negative.
+- **Level failure** (players meet, or time runs out, without all required items — or money goes
+  negative): costs exactly **one life** and, as long as a life remains, drops into the `levelFailed`
+  phase — a screen explaining what was missing (reusing the same reason text as `lost`'s), how many
+  lives are left, and a "press any key to retry this level" prompt. Retrying (`RETRY_LEVEL` action)
+  restarts the **same** level — not the whole game — using the exact money/envelope balance it
+  started with (`levelStartMoney`/`levelStartEnvelopes`, captured in `getInitialState`) and the
+  reduced life count, rather than a fresh $/envelope grant or a full 3 lives. This used to send any
+  such failure straight to full game-over; see `use-game-state.md`'s win/lose check.
+- **Full game over** (`lost` phase): only when lives actually reach **0** — either from a level
+  failure with no lives left, or from losing a life during play (mine hit / escaped required item)
+  while already down to the last one.
 - **Starting money must be a multiple of $100** (cash ammo costs $100/shot — leftover cents are unspendable).
+
+## Life-Loss Feedback
+Losing a life used to be silent (a mine hit had a floating "💣 TRAP! −1 life" toast, but an escaped
+required item just quietly decremented the heart count with no explanation at all) — feedback: "it is
+not clear in the game when and why player loses lives... there should be a very good reason for
+that". Every life-loss path now gets the same treatment:
+- A large, screen-centered message (not tied to any item's on/off-screen position, unlike the normal
+  per-item toasts) naming what happened — `💣 TRAP! −1 life` for a mine, `💔 <emoji> <item> got away!
+  −1 life` for a missed required item — see `useGameState.js`'s `centerMsg()`.
+- A brief red flash behind the HUD's heart icons (`livesFlashTimer`, ~⅔s), so the moment reads even
+  if the player's eyes are on the play field, not the HUD.
+- A full-game or level failure additionally gets its own explanatory overlay (`lost`/`levelFailed`
+  above) rather than relying on the toast alone.
 
 ## Row-Advance Pacing
 - Once all `required` items for the level are acquired, **both** row-advance and the time countdown
