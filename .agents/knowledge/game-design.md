@@ -166,20 +166,28 @@ there's no next level to top up.
   reduced life count, rather than a fresh $/envelope grant or a full 3 lives. This used to send any
   such failure straight to full game-over; see `use-game-state.md`'s win/lose check.
 - **Full game over** (`lost` phase): only when lives actually reach **0** — either from a level
-  failure with no lives left, or from losing a life during play (mine hit / escaped required item)
-  while already down to the last one.
+  failure with no lives left, or from a mine hit while already down to the last one.
+- **A missed required item costs nothing.** An essential item flying off-screen unacquired does
+  **not** cost a life — only an actual level failure (or a mine hit) does. This used to also cost a
+  life, silently; feedback ("failing a level should only reduce one life... it should restart the
+  level with one life less" — and separately, that missing an item shouldn't be conflated with that)
+  led to splitting the two: a level failure is now the *only* thing lives track, other than mines.
 - **Starting money must be a multiple of $100** (cash ammo costs $100/shot — leftover cents are unspendable).
 
 ## Life-Loss Feedback
-Losing a life used to be silent (a mine hit had a floating "💣 TRAP! −1 life" toast, but an escaped
-required item just quietly decremented the heart count with no explanation at all) — feedback: "it is
-not clear in the game when and why player loses lives... there should be a very good reason for
-that". Every life-loss path now gets the same treatment:
-- A large, screen-centered message (not tied to any item's on/off-screen position, unlike the normal
-  per-item toasts) naming what happened — `💣 TRAP! −1 life` for a mine, `💔 <emoji> <item> got away!
-  −1 life` for a missed required item — see `useGameState.js`'s `centerMsg()`.
-- A brief red flash behind the HUD's heart icons (`livesFlashTimer`, ~⅔s), so the moment reads even
-  if the player's eyes are on the play field, not the HUD.
+Losing a life used to be silent — a mine hit had a floating "💣 TRAP! −1 life" toast, but a level
+failure (before it retried the level, see above) and an escaped required item (before it stopped
+costing a life at all) had no explanation at all — feedback: "it is not clear in the game when and
+why player loses lives... there should be a very good reason for that". Both remaining life-cost
+paths — a mine hit, and a level failure (via its own `levelFailed` overlay, see above) — get a large,
+screen-centered message (not tied to any item's on/off-screen position, unlike the normal per-item
+toasts) naming what happened, plus a brief red flash behind the HUD's heart icons
+(`livesFlashTimer`, ~⅔s) so the moment reads even if the player's eyes are on the play field, not the
+HUD — see `useGameState.js`'s `centerMsg()`.
+
+A missed required item still gets its own callout (`⚠️ <emoji> <item> got away!`, no "−1 life"
+wording, no HUD flash, orange rather than red) purely as a heads-up, since it has no real
+consequence — the same `centerMsg()` mechanism, just without the life-loss framing.
 - A full-game or level failure additionally gets its own explanatory overlay (`lost`/`levelFailed`
   above) rather than relying on the toast alone.
 
