@@ -114,7 +114,17 @@ function spawnItem(topRow, bottomRow, level, acquiredItems = [], elapsedFraction
 // balance/ammo here. Left `undefined` for a genuinely fresh game
 // (CHOOSE_MODE/RESTART), where they contribute nothing and `level.money`/
 // `level.envelopes` are simply the real starting amounts.
-export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes) {
+//
+// `carryOverLives`, when given, replaces the usual fresh-level default of 3
+// — used only when *retrying* a failed level (see the 'levelFailed' phase
+// below) with one fewer life than the attempt that just failed. Advancing to
+// a new level after success still always resets to 3 (unchanged from before).
+//
+// `levelStartMoney`/`levelStartEnvelopes` record the exact `carryOverMoney`/
+// `carryOverEnvelopes` this call used, so a later failed-level retry can
+// recreate this level's original starting balance (via the same two params)
+// instead of whatever was left after the failed attempt's spending.
+export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes, carryOverLives) {
   const idx   = Math.min(levelIndex, LEVELS.length - 1);
   const level = LEVELS[idx];
   const invert  = mode === 'solo' && soloRole === 'groom';
@@ -132,7 +142,9 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
     money:           (carryOverMoney ?? 0) + level.money,
     ammo:            { envelope: (carryOverEnvelopes ?? 0) + level.envelopes },
     discount:        1,
-    lives:           3,
+    lives:           carryOverLives ?? 3,
+    levelStartMoney:     carryOverMoney ?? 0,
+    levelStartEnvelopes: carryOverEnvelopes ?? 0,
     players:         { [topRole]: makePlayer(topRole, true), [bottomRole]: makePlayer(bottomRole, false) },
     bullets:         [],
     items:           [],
@@ -144,6 +156,7 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
     advanceAnim:     0,
     meetingTimer:    0,   // counts up during 'meeting' phase for animations
     slowTimer:       0,   // frames remaining of hourglass row-advance slowdown
+    livesFlashTimer: 0,   // frames remaining of the HUD heart-flash after a life is lost
   };
 }
 
@@ -272,6 +285,17 @@ export function useGameState(active = true) {
       if (s.phase === 'lost' && e.code === 'KeyR' && e.type === 'keydown') {
         setState({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' }); return;
       }
+      // Failing a level (see the win/lose check in update()) costs one life
+      // and retries the SAME level — not a full restart — using the balance
+      // it started with (`levelStartMoney`/`levelStartEnvelopes`) and the
+      // life count already reduced by the failure, rather than a fresh 3.
+      if (s.phase === 'levelFailed' && e.type === 'keydown') {
+        setState({
+          ...getInitialState(s.currentLevel, s.mode, s.soloRole, s.levelStartMoney, s.levelStartEnvelopes, s.lives),
+          phase: 'playing',
+        });
+        return;
+      }
 
       if (s.phase !== 'playing') return;
 
@@ -314,15 +338,16 @@ export function useGameState(active = true) {
 
       const level = LEVELS[s.currentLevel];
 
-      const { mode, soloRole, topRole, bottomRole } = s;
+      const { mode, soloRole, topRole, bottomRole, levelStartMoney, levelStartEnvelopes } = s;
       let { frame, time, money, ammo, discount, lives,
             players, bullets, items, acquiredItems,
             messages, score, spawnTimer, rowAdvanceTimer, advanceAnim,
-            currentLevel, slowTimer } = s;
+            currentLevel, slowTimer, livesFlashTimer } = s;
 
       frame++;
-      advanceAnim = Math.max(0, advanceAnim - 1);
-      slowTimer   = Math.max(0, slowTimer - 1);
+      advanceAnim     = Math.max(0, advanceAnim - 1);
+      slowTimer       = Math.max(0, slowTimer - 1);
+      livesFlashTimer = Math.max(0, livesFlashTimer - 1);
 
       // ── timer & row advance ────────────────────────────────────────────
       // Both the countdown clock and row-advance speed up once all required
@@ -404,21 +429,32 @@ export function useGameState(active = true) {
         flashTimer: Math.max(0, it.flashTimer - 1),
       }));
 
+      let newMessages = messages
+        .filter(m => m.timer > 0)
+        .map(m => ({ ...m, timer: m.timer - 1 }));
+
       // ── items escaping off-screen → lose a life if essential and not yet acquired
+      // This used to happen silently — the only way to notice was the life
+      // count itself, and even then with no indication of why. A missed
+      // required item now gets the same big, centered, hard-to-miss callout
+      // as any other life loss (see the mine-hit branch below and the win/
+      // lose check's 'levelFailed' phase), plus a brief HUD heart flash.
       const escaped = items.filter(it =>
         it.x < -ITEM_WIDTH * 2 || it.x > GAME_WIDTH + ITEM_WIDTH * 2
       );
-      if (escaped.some(it => it.essential && !acquiredItems.includes(it.templateId))) {
+      const escapedEssential = escaped.filter(it => it.essential && !acquiredItems.includes(it.templateId));
+      if (escapedEssential.length > 0) {
         lives = Math.max(0, lives - 1);
+        livesFlashTimer = 40;
+        for (const it of escapedEssential) {
+          newMessages.push(centerMsg(`💔 ${it.emoji} ${it.label} got away! −1 life`, '#f44336'));
+        }
       }
       items = items.filter(it =>
         it.x >= -ITEM_WIDTH * 2 && it.x <= GAME_WIDTH + ITEM_WIDTH * 2
       );
 
       // ── bullet ↔ item collisions ──────────────────────────────────────
-      let newMessages = messages
-        .filter(m => m.timer > 0)
-        .map(m => ({ ...m, timer: m.timer - 1 }));
       const newAcquired = [...acquiredItems];
 
       for (let bi = bullets.length - 1; bi >= 0; bi--) {
@@ -462,6 +498,7 @@ export function useGameState(active = true) {
               newMessages.push(msg(`${Math.round(it.discountPct * 100)}% discount! ${it.emoji}`, it, '#ff9800'));
             } else if (it.incomeType === 'mine') {
               lives = Math.max(0, lives - 1);
+              livesFlashTimer = 40;
               newMessages.push(msg('💣 TRAP! −1 life', it, '#f44336'));
             } else if (it.incomeType === 'time') {
               slowTimer = HOURGLASS_SLOW_SECONDS * FPS;
@@ -485,23 +522,41 @@ export function useGameState(active = true) {
       const levelDone      = isLevelComplete(level, newAcquired);
       const playersHaveMet = newPlayers[topRole].row >= newPlayers[bottomRole].row;
 
+      // Failing a level's objective (players meet, or time runs out, without
+      // every required item acquired) no longer ends the whole run. It costs
+      // exactly one life and — as long as a life remains — drops into
+      // 'levelFailed', a transitional screen (like 'meeting'/'levelComplete')
+      // explaining what was missing, which retries this same level on a
+      // keypress with one fewer life and this level's original starting
+      // balance (see `levelStartMoney`/`levelStartEnvelopes` in
+      // getInitialState). Only running out of lives entirely still ends the
+      // whole game via 'lost'.
       let phase = 'playing';
       if (lives <= 0) {
         phase = 'lost';
       } else if (playersHaveMet) {
-        // Physical meeting → show couple scene
-        phase = (levelDone && money >= 0) ? 'meeting' : 'lost';
+        if (levelDone && money >= 0) {
+          // Physical meeting → show couple scene
+          phase = 'meeting';
+        } else {
+          lives -= 1;
+          livesFlashTimer = 40;
+          phase = lives <= 0 ? 'lost' : 'levelFailed';
+        }
       } else if (time <= 0) {
         if (levelDone && money >= 0) {
           phase = currentLevel + 1 < LEVELS.length ? 'levelComplete' : 'gameComplete';
         } else {
-          phase = 'lost';
+          lives -= 1;
+          livesFlashTimer = 40;
+          phase = lives <= 0 ? 'lost' : 'levelFailed';
         }
       }
 
       return {
         ...s,
         phase, frame, time, money, ammo, discount, lives,
+        levelStartMoney, levelStartEnvelopes,
         players:         newPlayers,
         bullets,
         items,
@@ -512,6 +567,7 @@ export function useGameState(active = true) {
         rowAdvanceTimer,
         advanceAnim,
         slowTimer,
+        livesFlashTimer,
       };
     });
   }, []);
@@ -552,6 +608,11 @@ export function useGameState(active = true) {
         setState({ ...getInitialState(0, action.mode, action.soloRole ?? null), phase: 'playing' }); break;
       case 'RESTART':
         setState(s => ({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' })); break;
+      case 'RETRY_LEVEL':
+        setState(s => ({
+          ...getInitialState(s.currentLevel, s.mode, s.soloRole, s.levelStartMoney, s.levelStartEnvelopes, s.lives),
+          phase: 'playing',
+        })); break;
       case 'NEXT_LEVEL': {
         const s = getState();
         // Guard: don't advance too early during meeting animation
@@ -599,7 +660,15 @@ export function useGameState(active = true) {
   return { getState, startLoop, stopLoop, setRenderCallback, handleAction };
 }
 
-// ── tiny helper ────────────────────────────────────────────────────────────
+// ── tiny helpers ───────────────────────────────────────────────────────────
 function msg(text, item, color) {
   return { id: Math.random().toString(36).slice(2), text, x: item.x, y: item.y, timer: 90, color };
+}
+
+// A bigger, screen-centered message that doesn't rise/drift like the normal
+// per-item toasts — used for life-loss callouts that need to read clearly
+// even when the triggering item is off-screen (an escaped essential item) or
+// happening amid other on-screen action.
+function centerMsg(text, color) {
+  return { id: Math.random().toString(36).slice(2), text, x: GAME_WIDTH / 2 - ITEM_WIDTH / 2, y: PLAY_HEIGHT / 2, timer: 110, color, big: true };
 }

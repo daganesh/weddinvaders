@@ -88,6 +88,16 @@ export const LEVELS = [
   },
 ];
 
+// Cap on how far into a level a required item's unlock can be pushed. Without
+// this, a level with N required items gates the last one until
+// `(N-1)/N` of the level's duration — e.g. Level 2's officiant (2 required
+// items) didn't unlock until 50% of its 150s duration (75s in), leaving a
+// long guests-only stretch with nothing else to shoot for. Capping the
+// fraction keeps the stagger (so items still don't all appear at once) while
+// guaranteeing every required item is spawnable well before the level's back
+// half, whatever `required.length` is.
+const MAX_REQUIRED_GATE_FRACTION = 0.3;
+
 // Returns the subset of WEDDING_ITEMS that can spawn right now.
 //
 // Required items used to all be spawnable from the very first frame — with
@@ -96,16 +106,18 @@ export const LEVELS = [
 // the rest of the level. `elapsedFraction` (0 at level start, 1 at the end —
 // see useGameState.js's update()) staggers each required item's first
 // appearance across the level instead: the item at `required[i]` only
-// becomes spawnable once `elapsedFraction >= i / required.length`, so
-// `required[0]` is available immediately (a single-required-item level like
-// Level 1 behaves exactly as before) while a level with several required
-// items spreads them out — each one keeps spawning once unlocked, same as
-// before, just introduced gradually rather than all at once.
+// becomes spawnable once `elapsedFraction >= min(i / required.length,
+// MAX_REQUIRED_GATE_FRACTION)`, so `required[0]` is available immediately (a
+// single-required-item level like Level 1 behaves exactly as before) while a
+// level with several required items spreads them out — each one keeps
+// spawning once unlocked, same as before, just introduced gradually rather
+// than all at once, and never gated past 30% of the level's duration.
 export function getSpawnPool(level, elapsedFraction = 1) {
   const allowed = new Set(level.optional);
   if (level.hasMines) allowed.add('mine');
   level.required.forEach((id, i) => {
-    if (elapsedFraction >= i / level.required.length) allowed.add(id);
+    const threshold = Math.min(i / level.required.length, MAX_REQUIRED_GATE_FRACTION);
+    if (elapsedFraction >= threshold) allowed.add(id);
   });
   return WEDDING_ITEMS.filter(w => allowed.has(w.id));
 }

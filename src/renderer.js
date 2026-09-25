@@ -426,7 +426,7 @@ function drawPanel(ctx, state, cfg, itemImages) {
 // ── HUD ──────────────────────────────────────────────────────────────────────
 
 function drawHUD(ctx, state) {
-  const { time, money, ammo, lives, players, discount } = state;
+  const { time, money, ammo, lives, players, discount, livesFlashTimer = 0 } = state;
   const hudY = PLAY_HEIGHT;
 
   ctx.fillStyle = 'rgba(10,20,50,0.94)';
@@ -434,6 +434,13 @@ function drawHUD(ctx, state) {
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.lineWidth   = 1;
   ctx.beginPath(); ctx.moveTo(0, hudY); ctx.lineTo(GAME_WIDTH, hudY); ctx.stroke();
+
+  // Brief red flash behind the hearts the instant a life is lost, so the
+  // moment reads clearly even if the player's eyes are elsewhere on screen.
+  if (livesFlashTimer > 0) {
+    ctx.fillStyle = `rgba(244,67,54,${(livesFlashTimer / 40) * 0.55})`;
+    ctx.fillRect(0, hudY, 150, HUD_HEIGHT);
+  }
 
   ctx.font = '18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#fff';
@@ -473,15 +480,23 @@ function drawHUD(ctx, state) {
 function drawMessages(ctx, messages) {
   for (const m of messages) {
     const alpha = Math.min(1, m.timer / 25);
-    const rise  = (90 - m.timer) * 0.4;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.font        = 'bold 16px monospace';
-    ctx.textAlign   = 'center';
     ctx.fillStyle   = m.color ?? '#fff';
     ctx.shadowColor = m.color ?? '#fff';
-    ctx.shadowBlur  = 6;
-    ctx.fillText(m.text, m.x + ITEM_WIDTH / 2, m.y - rise);
+    ctx.textAlign   = 'center';
+    if (m.big) {
+      // Life-loss callouts: bigger, screen-centered, pinned (no rise) so
+      // they're unmissable regardless of where the triggering item was.
+      ctx.font       = 'bold 22px monospace';
+      ctx.shadowBlur = 10;
+      ctx.fillText(m.text, m.x + ITEM_WIDTH / 2, m.y);
+    } else {
+      const rise = (90 - m.timer) * 0.4;
+      ctx.font       = 'bold 16px monospace';
+      ctx.shadowBlur = 6;
+      ctx.fillText(m.text, m.x + ITEM_WIDTH / 2, m.y - rise);
+    }
     ctx.restore();
   }
 }
@@ -698,6 +713,25 @@ function drawModeSelect(ctx, cfg) {
 
 // ── overlays ─────────────────────────────────────────────────────────────────
 
+// Shared by the full-game-over ('lost') and per-level-failure ('levelFailed')
+// overlays below — both explain the objective the player fell short of
+// (missing required items, or being out of money) the same way.
+function computeFailReason(level, acquiredItems, cfg) {
+  const uniqueMissing = [...new Set(
+    level.required.filter(id => !acquiredItems.includes(id))
+  )];
+  if (uniqueMissing.length > 0) {
+    const labels = uniqueMissing
+      .map(id => {
+        const w = WEDDING_ITEMS.find(w => w.id === id);
+        return w ? `${w.emoji} ${getItemLabel(w, cfg)}` : id;
+      })
+      .join('  ·  ');
+    return `Still needed: ${labels}`;
+  }
+  return '💸 Ran out of money';
+}
+
 function drawOverlay(ctx, state, assets, cfg) {
   const { phase, currentLevel, acquiredItems, lives } = state;
   const level = LEVELS[currentLevel] ?? LEVELS[0];
@@ -755,26 +789,7 @@ function drawOverlay(ctx, state, assets, cfg) {
     ctx.shadowBlur = 0;
 
     // Explain why — much clearer for the player
-    let reason = '';
-    if (lives <= 0) {
-      reason = '❤️ Ran out of lives';
-    } else {
-      const uniqueMissing = [...new Set(
-        level.required.filter(id => !acquiredItems.includes(id))
-      )];
-      if (uniqueMissing.length > 0) {
-        const labels = uniqueMissing
-          .map(id => {
-            const w = WEDDING_ITEMS.find(w => w.id === id);
-            return w ? `${w.emoji} ${getItemLabel(w, cfg)}` : id;
-          })
-          .join('  ·  ');
-        reason = `Still needed: ${labels}`;
-      } else {
-        reason = '💸 Ran out of money';
-      }
-    }
-
+    const reason = lives <= 0 ? '❤️ Ran out of lives' : computeFailReason(level, acquiredItems, cfg);
     if (reason) {
       ctx.font = '17px Arial'; ctx.fillStyle = '#ffaaaa';
       ctx.fillText(reason, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20);
@@ -782,6 +797,30 @@ function drawOverlay(ctx, state, assets, cfg) {
 
     ctx.font = '18px Arial'; ctx.fillStyle = '#ccc';
     ctx.fillText('Press R to try again', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20);
+
+  } else if (phase === 'levelFailed') {
+    // A level's objective wasn't met in time (or before the players met) —
+    // unlike 'lost' above, this costs exactly one life rather than ending
+    // the whole run, and retries this same level (not the whole game).
+    ctx.textAlign   = 'center';
+    ctx.font        = 'bold 40px monospace';
+    ctx.fillStyle   = '#ff9800';
+    ctx.shadowColor = '#ff9800';
+    ctx.shadowBlur  = 24;
+    ctx.fillText('💔 Level Failed', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 65);
+    ctx.shadowBlur = 0;
+
+    const reason = computeFailReason(level, acquiredItems, cfg);
+    if (reason) {
+      ctx.font = '17px Arial'; ctx.fillStyle = '#ffcc99';
+      ctx.fillText(reason, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20);
+    }
+
+    ctx.font = 'bold 20px Arial'; ctx.fillStyle = '#f44336';
+    ctx.fillText(`−1 life  ·  ${lives} ${lives === 1 ? 'life' : 'lives'} left`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 16);
+
+    ctx.font = '18px Arial'; ctx.fillStyle = '#ccc';
+    ctx.fillText('Press any key to retry this level', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
   }
 }
 
@@ -819,7 +858,7 @@ export function render(ctx, state, assets, config) {
   drawHUD(ctx, state);
   drawPanel(ctx, state, cfg, assets?.items);
 
-  if (phase === 'levelComplete' || phase === 'gameComplete' || phase === 'lost') {
+  if (phase === 'levelComplete' || phase === 'gameComplete' || phase === 'lost' || phase === 'levelFailed') {
     drawOverlay(ctx, state, assets, cfg);
     drawPanel(ctx, state, cfg, assets?.items);  // keep checklist visible on top of overlay
   }
