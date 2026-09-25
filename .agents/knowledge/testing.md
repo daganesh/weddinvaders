@@ -84,10 +84,12 @@ npm run dev
     orientation. Solo-as-Bride and Couple mode should look exactly as before (no rotation).
 12. **Game over** — lose all lives → lost overlay → click to restart (this resets money/envelopes to
     a fresh Level 1 start, unlike advancing to a next level, which carries the balance forward).
-12b. **Life-loss feedback** — let a required item fly all the way off-screen without shooting it (or
-    get hit by a mine, Level 4+): a big, screen-centered "💔 <item> got away! −1 life" (or "💣 TRAP!
-    −1 life") message should appear immediately, plus a brief red flash behind the HUD's hearts —
-    not just a heart silently disappearing.
+12b. **Life-loss feedback** — get hit by a mine (Level 4+): a big, screen-centered "💣 TRAP! −1 life"
+    message should appear immediately, plus a brief red flash behind the HUD's hearts — not just a
+    heart silently disappearing. Separately, let a required item fly all the way off-screen without
+    shooting it: a big, screen-centered orange "⚠️ <item> got away!" message should appear (no "−1
+    life" wording), but the heart count should **not** change and the HUD should **not** flash — a
+    missed item is a heads-up only, it costs nothing.
 12c. **Level failure retries the level, not the whole game** — let a level's timer run out (or let
     the players meet) without acquiring every required item: a "💔 Level Failed" overlay should
     appear (not the full "Wedding Failed!" game-over screen) naming what was missing, "−1 life · N
