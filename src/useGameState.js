@@ -433,22 +433,18 @@ export function useGameState(active = true) {
         .filter(m => m.timer > 0)
         .map(m => ({ ...m, timer: m.timer - 1 }));
 
-      // ── items escaping off-screen → lose a life if essential and not yet acquired
-      // This used to happen silently — the only way to notice was the life
-      // count itself, and even then with no indication of why. A missed
-      // required item now gets the same big, centered, hard-to-miss callout
-      // as any other life loss (see the mine-hit branch below and the win/
-      // lose check's 'levelFailed' phase), plus a brief HUD heart flash.
+      // ── items escaping off-screen → no life cost, just a heads-up ──────
+      // A missed required item does **not** cost a life any more — only an
+      // actual level failure does (see the win/lose check below). It still
+      // gets a big, centered, hard-to-miss callout so the player notices
+      // (this used to be silent), just without the "−1 life" framing or the
+      // HUD heart flash, since nothing was actually lost yet.
       const escaped = items.filter(it =>
         it.x < -ITEM_WIDTH * 2 || it.x > GAME_WIDTH + ITEM_WIDTH * 2
       );
       const escapedEssential = escaped.filter(it => it.essential && !acquiredItems.includes(it.templateId));
-      if (escapedEssential.length > 0) {
-        lives = Math.max(0, lives - 1);
-        livesFlashTimer = 40;
-        for (const it of escapedEssential) {
-          newMessages.push(centerMsg(`💔 ${it.emoji} ${it.label} got away! −1 life`, '#f44336'));
-        }
+      for (const it of escapedEssential) {
+        newMessages.push(centerMsg(`⚠️ ${it.emoji} ${it.label} got away!`, '#ff9800'));
       }
       items = items.filter(it =>
         it.x >= -ITEM_WIDTH * 2 && it.x <= GAME_WIDTH + ITEM_WIDTH * 2
