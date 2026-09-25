@@ -84,6 +84,22 @@ npm run dev
     orientation. Solo-as-Bride and Couple mode should look exactly as before (no rotation).
 12. **Game over** — lose all lives → lost overlay → click to restart (this resets money/envelopes to
     a fresh Level 1 start, unlike advancing to a next level, which carries the balance forward).
+12b. **Life-loss feedback** — let a required item fly all the way off-screen without shooting it (or
+    get hit by a mine, Level 4+): a big, screen-centered "💔 <item> got away! −1 life" (or "💣 TRAP!
+    −1 life") message should appear immediately, plus a brief red flash behind the HUD's hearts —
+    not just a heart silently disappearing.
+12c. **Level failure retries the level, not the whole game** — let a level's timer run out (or let
+    the players meet) without acquiring every required item: a "💔 Level Failed" overlay should
+    appear (not the full "Wedding Failed!" game-over screen) naming what was missing, "−1 life · N
+    lives left", and "Press any key to retry this level". Pressing any key (or clicking, on mobile)
+    should restart the **same** level with the same starting money/envelopes it began with (not a
+    reset, not carrying over the failed attempt's spending) and one fewer life. Repeating this until
+    lives hit 0 should **then** show the real "Wedding Failed!" full game-over overlay with "❤️ Ran
+    out of lives" and "Press R to try again".
+12d. **Level 2's required items don't leave a long guests-only gap** — playing Level 2 without
+    shooting anything required, the second required item (officiant) should become spawnable well
+    before the level's midpoint (around 30% of its duration, not 50%) — you shouldn't see several
+    spawn cycles of nothing but guests/family/extras before it first appears.
 13. **All 5 levels** — play through or use browser console to jump levels if needed.
 14. **Couple mode hidden on mobile** — at a viewport ≤840px wide, the mode-select screen should show
     only "Solo as Bride"/"Solo as Groom", no "👰🤵 Couple" button; above 840px, all three should

@@ -8,7 +8,7 @@ import { GAME_WIDTH, GAME_HEIGHT, CANVAS_WIDTH, AMMO_ORDER, AMMO_META, IS_MOBILE
 import { LEVELS, isLevelComplete } from './levels';
 import './Game.css';
 
-const END_OF_LEVEL_PHASES = new Set(['meeting', 'levelComplete', 'gameComplete', 'lost']);
+const END_OF_LEVEL_PHASES = new Set(['meeting', 'levelComplete', 'gameComplete', 'lost', 'levelFailed']);
 
 // The game page's content only — the shared banner/hamburger header lives in
 // PageHeader.jsx now, rendered once by App.jsx above whichever page (this
@@ -90,6 +90,7 @@ export default function Game({ active }) {
     if (phase === 'levelComplete') handleAction({ type: 'NEXT_LEVEL' });
     if (phase === 'gameComplete')  handleAction({ type: 'RESTART' });
     if (phase === 'lost')          handleAction({ type: 'RESTART' });
+    if (phase === 'levelFailed')   handleAction({ type: 'RETRY_LEVEL' });
   }, [getState, handleAction]);
 
   // ── solo mode: drag left/right on the canvas to move ──────────────────────

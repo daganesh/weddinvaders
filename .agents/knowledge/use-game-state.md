@@ -24,8 +24,9 @@ stops/starts the render loop for the equivalent per-frame case.
 
 Internally, state lives in `stateRef` (a `useRef`, not `useState` — see architecture.md's "Key
 Design Decisions") seeded by
-`getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes)`
-(`useGameState.js:117`) — see "Money and envelopes persist across levels" below for the 4th/5th params.
+`getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes, carryOverLives)`
+(`useGameState.js:117`) — see "Money and envelopes persist across levels" below for the 4th/5th params
+and "Level failure & retry" below for the 6th.
 
 ### Solo mode: `topRole`/`bottomRole`
 `mode` (`'couple'`/`'solo'`) and `soloRole` (`'bride'`/`'groom'`/`null`) are stored in state and
@@ -43,14 +44,14 @@ rendering-side equivalent (`isTop` passed to `drawPlayer`).
 ## Key Surface
 | Export / function | Line | Purpose |
 |---|---|---|
-| `getInitialState(levelIndex, mode, soloRole, carryOverMoney, carryOverEnvelopes)` | 117 | Builds a fresh state object for a given level/mode (money, ammo, players, timers, `slowTimer`, `topRole`/`bottomRole`). Authoritative shape — a field missing here becomes `undefined` after a level restart. `money` is `(carryOverMoney ?? 0) + level.money` and `ammo.envelope` is `(carryOverEnvelopes ?? 0) + level.envelopes` — **additive**, not a fallback — see "Money and envelopes persist across levels" below. `ammo` is now just `{ envelope }` (one pool, not two). |
+| `getInitialState(levelIndex, mode, soloRole, carryOverMoney, carryOverEnvelopes, carryOverLives)` | 117 | Builds a fresh state object for a given level/mode (money, ammo, players, timers, `slowTimer`, `livesFlashTimer`, `topRole`/`bottomRole`). Authoritative shape — a field missing here becomes `undefined` after a level restart. `money` is `(carryOverMoney ?? 0) + level.money` and `ammo.envelope` is `(carryOverEnvelopes ?? 0) + level.envelopes` — **additive**, not a fallback — see "Money and envelopes persist across levels" below. `lives` is `carryOverLives ?? 3` — only a failed-level retry passes a value here (see "Level failure & retry" below); every other caller gets a fresh 3. Also stashes `levelStartMoney`/`levelStartEnvelopes` (`carryOverMoney`/`carryOverEnvelopes` as given, defaulting to `0`) so a later retry of *this* level can reconstruct its original starting balance. `ammo` is just `{ envelope }` (one pool, not two). |
 | `useGameState()` | 159 | The hook itself; returns `{ getState, startLoop, stopLoop, setRenderCallback, handleAction }`. |
-| `onKey(e)` (internal, in the hook's keyboard effect) | 243 | Bails immediately if `active` is false. Otherwise routes `keydown`/`keyup`: several non-`playing` phases advance on any key (`meeting`/`levelComplete`/`gameComplete`/`lost` → next level, replay, etc. — `gameComplete`'s replay lands on `modeSelect`, not `title`, since the canvas title screen no longer exists); while `playing`, dispatches shoot/cycle-ammo **only for the controllable role(s)** — in solo mode the waiting role's keys are ignored via `brideControllable`/`groomControllable` checks. `KeyN` just calls `skipAdvance()` (see below). There is no `title`-phase branch here any more — `Game.jsx`'s `handleStartPlaying` dispatches `handleAction({type:'START'})` directly instead of waiting for a keypress. |
+| `onKey(e)` (internal, in the hook's keyboard effect) | 243 | Bails immediately if `active` is false. Otherwise routes `keydown`/`keyup`: several non-`playing` phases advance on any key (`meeting`/`levelComplete`/`gameComplete`/`lost` → next level, replay, etc. — `gameComplete`'s replay lands on `modeSelect`, not `title`, since the canvas title screen no longer exists); `lost` only advances on `KeyR` specifically (a full restart is a bigger commitment than the other any-key transitions); `levelFailed` advances on any key like the others, retrying the same level (see "Level failure & retry" below) rather than restarting the game. While `playing`, dispatches shoot/cycle-ammo **only for the controllable role(s)** — in solo mode the waiting role's keys are ignored via `brideControllable`/`groomControllable` checks. `KeyN` just calls `skipAdvance()` (see below). There is no `title`-phase branch here any more — `Game.jsx`'s `handleStartPlaying` dispatches `handleAction({type:'START'})` directly instead of waiting for a keypress. |
 | `shoot(role)` | 182 | Validates ammo/money (`money < 100` for cash, `ammo.envelope <= 0` for envelope) and that `role` is controllable in the current mode, deducts cost, spawns a bullet — direction (`vy`, spawn `y`) is based on `role === s.topRole`, not the role identity, so solo-as-groom (now in the bottom slot) shoots upward correctly. Called for both keyboard shortcuts and `handleAction({type:'SHOOT'})`. |
 | `skipAdvance()` | 218 | Fast-forwards both players one row toward the center, same as the level's normal row-advance but immediate — a no-op unless `isLevelComplete()` and the rows haven't already met. Factored out so both the desktop `KeyN` handler and the mobile "⏩ Skip" button (`handleAction({type:'SKIP_ADVANCE'})`, see `game-jsx.md`) share one implementation. |
-| `update()` | 307 | Runs every animation frame: row advance (rate-adjusted, see below, using `topRole`/`bottomRole`), player movement (`moveX`, gated per-role by controllability), bullet travel, item spawn/movement (capped at `MAX_CONCURRENT_ITEMS` on screen at once — 8 desktop / 5 mobile portrait, see `constants.md`), escaped-item life loss, **bullet↔item collision** (inline, not a separate function — see "Bullet↔item eligibility" below for the `ammoOK`/`playerOK` gate), win/lose phase transition. |
+| `update()` | 307 | Runs every animation frame: row advance (rate-adjusted, see below, using `topRole`/`bottomRole`), player movement (`moveX`, gated per-role by controllability), bullet travel, item spawn/movement (capped at `MAX_CONCURRENT_ITEMS` on screen at once — 8 desktop / 5 mobile portrait, see `constants.md`), escaped-item life loss (now with a `centerMsg()` callout and a HUD flash — see "Life-loss feedback" below), **bullet↔item collision** (inline, not a separate function — see "Bullet↔item eligibility" below for the `ammoOK`/`playerOK` gate), win/lose phase transition (see "Level failure & retry" below). |
 | `loop()` / `startLoop()` / `stopLoop()` | ~521–535 | `requestAnimationFrame` driver; calls `update()` then the render callback registered via `setRenderCallback`. |
-| `handleAction(action)` | 542 | Dispatch table for UI-originated actions: `START` (→ `modeSelect`), `CHOOSE_MODE` (→ fresh `playing` state via `getInitialState(0, mode, soloRole)` — no carry-over, this is a genuinely fresh game), `RESTART`, `NEXT_LEVEL` (carries `s.money`/`s.ammo.envelope` forward via `carryOverMoney`/`carryOverEnvelopes`), `SHOOT`, `CYCLE_AMMO`, `SKIP_ADVANCE`, `DRAG_MOVE`, `SELECT_AMMO` — used by `Game.jsx`'s click/touch handlers and on-screen mobile buttons. `RESTART`/`NEXT_LEVEL` preserve the current `mode`/`soloRole` rather than resetting to Couple; `RESTART` does **not** carry money/envelopes forward (a loss restarts the whole game fresh). `DRAG_MOVE` (mobile drag/swipe gesture) moves `action.role`'s player by `action.deltaX` immediately — bypassing `keysRef`/`update()`'s per-frame `moveX` entirely — clamped to the play-field bounds; `Game.jsx` computes `deltaX` from the raw per-`touchmove` screen delta so the player tracks the finger 1:1 (a fast flick covers as much ground as an equally fast, deliberate drag), not a fixed-speed nudge. |
+| `handleAction(action)` | 542 | Dispatch table for UI-originated actions: `START` (→ `modeSelect`), `CHOOSE_MODE` (→ fresh `playing` state via `getInitialState(0, mode, soloRole)` — no carry-over, this is a genuinely fresh game), `RESTART`, `RETRY_LEVEL` (retries the current level after a `levelFailed` — see "Level failure & retry" below), `NEXT_LEVEL` (carries `s.money`/`s.ammo.envelope` forward via `carryOverMoney`/`carryOverEnvelopes`), `SHOOT`, `CYCLE_AMMO`, `SKIP_ADVANCE`, `DRAG_MOVE`, `SELECT_AMMO` — used by `Game.jsx`'s click/touch handlers and on-screen mobile buttons. `RESTART`/`NEXT_LEVEL`/`RETRY_LEVEL` preserve the current `mode`/`soloRole` rather than resetting to Couple; `RESTART` does **not** carry money/envelopes/lives forward (a full game over restarts fresh). `DRAG_MOVE` (mobile drag/swipe gesture) moves `action.role`'s player by `action.deltaX` immediately — bypassing `keysRef`/`update()`'s per-frame `moveX` entirely — clamped to the play-field bounds; `Game.jsx` computes `deltaX` from the raw per-`touchmove` screen delta so the player tracks the finger 1:1 (a fast flick covers as much ground as an equally fast, deliberate drag), not a fixed-speed nudge. |
 | `spawnItem(topRow, bottomRow, level, acquiredItems, elapsedFraction)` (internal) | 51 | Builds one flying item from the level's weighted spawn pool; randomizes `incomeAmount` for guest/family items. `elapsedFraction` (0 at level start, 1 at the end — computed in `update()` from `time`/`level.gameDuration`) is forwarded to `levels.js`'s `getSpawnPool()` to stagger required items' first appearance — see `game-design.md`'s "Required-Item Pacing". **Not customization-aware**: the spawned item's `label` (used later for the floating pickup message in `drawMessages`, `renderer.js`) is copied straight from `WEDDING_ITEMS` in `constants.js` at spawn time. If an admin customizes the "Her Family"/"His Family" labels via `customizationStore.js`, already-spawned/queued items still show the old label in their floating "+$400 Her Family" toast — only the side-panel checklist (which resolves labels live via `renderer.js`'s `getItemLabel(item, cfg)`) reflects the change immediately. Known v1 limitation, not a bug. |
 | `pickWeighted(pool)` (internal) | 41 | Cumulative-weight random pick over a pool's `spawnWeight` fields — used by `spawnItem()` instead of a uniform pick. See `constants.md`'s `WEDDING_ITEMS.spawnWeight`. |
 
@@ -64,6 +65,36 @@ a level no longer resets the player's balance/ammo — it tops both up on top of
 contribute `0` and `level.money`/`level.envelopes` end up being the real starting amounts. See
 `game-design.md`'s "Money and Envelopes Persist Across Levels" for the design rationale and the
 in-game "+$X & +N 💌 waiting for you!" notice shown ahead of each new level.
+
+### Level failure & retry
+The win/lose check at the end of `update()` (~line 484) used to send **any** failure straight to
+`'lost'` (full game over): players meeting without every required item, or time running out the same
+way. Now, that same condition costs exactly one life and — as long as `lives` is still above 0 after
+the decrement — sets `phase: 'levelFailed'` instead of `'lost'`; only an *already-empty* life pool
+(checked first, before the meeting/timeout branches) or a failure that drains the last life still
+produces `'lost'`. `livesFlashTimer` is set to `40` on this decrement too, same as the other
+life-loss paths (see "Life-loss feedback" below).
+
+`levelFailed` is a display-only stop, structurally like `meeting`/`levelComplete` — `update()` leaves
+the failed attempt's final state in place (so its overlay can show what was missing) and only
+`onKey`'s `levelFailed` branch / `handleAction`'s `RETRY_LEVEL` case actually rebuild the level, via:
+```js
+getInitialState(s.currentLevel, s.mode, s.soloRole, s.levelStartMoney, s.levelStartEnvelopes, s.lives)
+```
+Passing back `s.levelStartMoney`/`s.levelStartEnvelopes` (not `s.money`/`s.ammo.envelope`) is
+deliberate — it recreates the level's original starting balance, not whatever the failed attempt had
+spent it down to. Passing `s.lives` (rather than omitting it, which would default to a fresh 3) is
+what makes the failure actually cost something across the retry.
+
+### Life-loss feedback
+Every path that decrements `lives` (escaped required item, mine hit, or a level failure above) also
+sets `livesFlashTimer = 40` (~⅔s), read by `renderer.js`'s `drawHUD` to flash red behind the hearts,
+and pushes a `centerMsg()` — a big, screen-centered, non-drifting message (`{ ..., big: true }`,
+rendered by `drawMessages`'s `m.big` branch) instead of the normal per-item toast (`msg()`, tied to
+the triggering item's `x`/`y`). The `centerMsg` treatment specifically fixes escaped required items,
+which used to lose a life completely silently — the item is off-screen by the time the life is lost,
+so anchoring the message to its `x`/`y` (like the pre-existing mine-hit toast already did) would put
+the text off-screen too.
 
 ### Bullet↔item eligibility (inside `update()`'s collision loop, ~line 441)
 ```js
