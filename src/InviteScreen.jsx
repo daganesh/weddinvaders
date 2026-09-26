@@ -1,6 +1,5 @@
 import { buildGoogleCalendarUrl, buildVenueMapUrl, formatEventDateTime } from './eventLinks';
 import { LinksRow } from './LinksRow';
-import { useRsvpStatus } from './useRsvpStatus';
 import RsvpPage from './RsvpPage';
 import GameTeaser from './GameTeaser';
 import './InviteScreen.css';
@@ -24,19 +23,11 @@ export default function InviteScreen({ config }) {
   const venueAddress = config.text.venueAddress.trim();
   const formattedDate = formatEventDateTime(config.text.weddingDateTime);
 
-  // The in-app pages RSVP still unlocks (RegistryPage/SongsPage/FoodPage) —
-  // plain hash nav, not run through LinksRow/withProtocol (which is for
-  // *external* admin links and would mangle a bare "#/registry" fragment by
-  // prepending "https://"). "Visible but blocked": a locked page still links
-  // through, landing on its own GateNotice rather than being hidden or
-  // disabled. RSVP itself isn't listed here any more — it's the form right
-  // below, not a link to somewhere else.
-  const { rsvped, attending } = useRsvpStatus();
-  const pageLinks = [
-    { id: 'registry', href: '#/registry', label: '🎁 Gift Registry', locked: !rsvped },
-    ...(config.text.songsEnabled ? [{ id: 'songs', href: '#/songs', label: '🎵 Song Requests', locked: !attending }] : []),
-    ...(config.text.foodEnabled ? [{ id: 'food', href: '#/food', label: '🍽️ Food Requests', locked: !attending }] : []),
-  ];
+  // Registry/Songs/Food navigation lives in the RSVP confirmation view's own
+  // buttons (RsvpPage.jsx, shown once RSVPed) and the header's hamburger menu
+  // (PageHeader.jsx, always available, with the same 🔒 gating) — this page
+  // used to also render its own pill-link row for the same three pages,
+  // which just duplicated one or the other depending on RSVP status.
 
   // Admin free-form extras (directions, wedding website, hotel block…) plus
   // the two computed ones — Add to Calendar always (the date is a required
@@ -76,16 +67,6 @@ export default function InviteScreen({ config }) {
           <GameTeaser config={config} />
         </div>
       </div>
-
-      {pageLinks.length > 0 && (
-        <div className="title-links">
-          {pageLinks.map(link => (
-            <a key={link.id} className={`title-link${link.locked ? ' is-locked' : ''}`} href={link.href}>
-              {link.label}{link.locked ? ' 🔒' : ''}
-            </a>
-          ))}
-        </div>
-      )}
 
       <LinksRow links={extraLinks} />
     </div>

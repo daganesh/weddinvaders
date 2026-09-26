@@ -77,5 +77,13 @@
 @media (max-width: 760px) {
   .home-columns {
     flex-direction: column;
+    /* Overrides the row layout's `flex-start` (which only exists there to
+       keep unequal-height columns top-aligned instead of stretched to
+       match). Stacked in a column, the cross axis is horizontal, so
+       `flex-start` left `.home-main`/`.home-side` shrink-wrapped to their
+       content's own width — barely visible for GameTeaser.jsx's animation
+       stage, which has no real intrinsic width of its own — instead of
+       spanning the full column width their `width: 100%` children expect. */
+    align-items: stretch;
   }
 }

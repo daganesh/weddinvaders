@@ -452,20 +452,26 @@ function drawHUD(ctx, state) {
   ctx.fillStyle = time < 20 ? '#f44336' : time < 30 ? '#ff9800' : '#fff';
   ctx.fillText(`${mins}:${String(secs).padStart(2,'0')}`, GAME_WIDTH / 2, hudY + 20);
 
-  ctx.font      = 'bold 18px monospace';
+  // Both remaining-ammo readouts (money and envelopes) are the numbers a
+  // player most needs to track — sized and colored to match each other and
+  // to stand out from the smaller, decorative "which ammo is selected"
+  // labels below them (feedback: it wasn't clear how much of either was
+  // left, especially once shooting silently stops at zero of both).
+  ctx.font      = 'bold 21px monospace';
   ctx.textAlign = 'right';
   ctx.fillStyle = money < 200 ? '#f44336' : '#4caf50';
   ctx.fillText(`💰 $${Math.floor(money)}`, GAME_WIDTH - 10, hudY + 20);
 
-  ctx.font = 'bold 15px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#aaa';
+  ctx.font = 'bold 19px monospace'; ctx.textAlign = 'left';
+  ctx.fillStyle = ammo.envelope <= 2 ? '#f44336' : '#4caf50';
   ctx.fillText(`💌×${ammo.envelope}`, 10, hudY + 44);
 
   const bMeta = AMMO_META[players.bride.selectedAmmo];
-  ctx.font = 'bold 15px monospace'; ctx.fillStyle = bMeta.color; ctx.textAlign = 'left';
-  ctx.fillText(`👰 ${bMeta.label}`, 90, hudY + 44);
+  ctx.font = 'bold 13px monospace'; ctx.fillStyle = bMeta.color; ctx.textAlign = 'left';
+  ctx.fillText(`👰 ${bMeta.label}`, 105, hudY + 44);
 
   const gMeta = AMMO_META[players.groom.selectedAmmo];
-  ctx.font = 'bold 15px monospace'; ctx.fillStyle = gMeta.color; ctx.textAlign = 'right';
+  ctx.font = 'bold 13px monospace'; ctx.fillStyle = gMeta.color; ctx.textAlign = 'right';
   ctx.fillText(`${gMeta.label} 🤵`, GAME_WIDTH - 10, hudY + 44);
 
   if (discount < 1) {
@@ -517,6 +523,46 @@ function drawAdvanceAnim(ctx, anim) {
   ctx.shadowColor = '#ffd700';
   ctx.shadowBlur  = 20;
   ctx.fillText('💒  ADVANCING…  💒', GAME_WIDTH / 2, PLAY_HEIGHT / 2);
+  ctx.restore();
+}
+
+// ── first-time ammo hint ────────────────────────────────────────────────────
+
+// A one-time reminder banner (see useGameState.js's `shouldShowAmmoHint()`)
+// shown over the first several seconds of a guest's very first Level 1 —
+// feedback was that it wasn't clear early on when to use cash vs. envelope
+// ammo. Drawn as an overlay on top of normal gameplay (not a blocking
+// screen — the level keeps running underneath), fading out over its last
+// second rather than cutting off abruptly.
+function drawAmmoHint(ctx, timer) {
+  if (timer <= 0) return;
+  const FADE_FRAMES = 60;
+  const alpha = Math.min(1, timer / FADE_FRAMES);
+
+  const x = 16, y = 10, w = GAME_WIDTH - 32, h = 92;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  roundRect(ctx, x, y, w, h, 10);
+  ctx.fillStyle   = 'rgba(10,20,50,0.94)';
+  ctx.fill();
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.font      = 'bold 13px monospace';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText('💡 New here? Two ammo types:', GAME_WIDTH / 2, y + 20);
+
+  ctx.font      = '12px Arial';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('💵 Cash → buy wedding items', GAME_WIDTH / 2, y + 40);
+  ctx.fillText('💌 Envelope → invite guests & family', GAME_WIDTH / 2, y + 58);
+
+  ctx.font      = '11px Arial';
+  ctx.fillStyle = '#ccc';
+  ctx.fillText('Switch anytime: ↑↓ / S · or the 🔄 button', GAME_WIDTH / 2, y + 78);
   ctx.restore();
 }
 
@@ -828,7 +874,7 @@ function drawOverlay(ctx, state, assets, cfg) {
 
 export function render(ctx, state, assets, config) {
   const cfg = config ?? DEFAULT_CONFIG;
-  const { phase, players, bullets, items, messages, advanceAnim, mode, soloRole, topRole, frame } = state;
+  const { phase, players, bullets, items, messages, advanceAnim, mode, soloRole, topRole, frame, ammoHintTimer } = state;
 
   if (phase === 'title') { drawTitle(ctx, cfg); return; }
 
@@ -855,6 +901,7 @@ export function render(ctx, state, assets, config) {
 
   drawMessages(ctx, messages);
   drawAdvanceAnim(ctx, advanceAnim);
+  drawAmmoHint(ctx, ammoHintTimer);
   drawHUD(ctx, state);
   drawPanel(ctx, state, cfg, assets?.items);
 

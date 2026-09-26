@@ -15,11 +15,15 @@ npm run dev
 1. **Home page (InviteScreen)** — loads at `#/` (or no hash) without errors; couple names/date/venue
    header, then a two-column area: the RSVP form at ~66% width (left/top), a small animated game
    preview + "▶ START GAME" at ~33% (right/bottom) — stacks to a single column, RSVP first, under a
-   760px viewport width. Below that, page-nav pills for Registry and (if enabled) Songs/Food show a
-   🔒 and dimmed style before any RSVP (RSVP itself has no pill — it's the form right there). "START
-   GAME" navigates to `#/game` regardless of RSVP status (canvas inside a bordered game frame,
-   jumping straight to mode-select — no title screen in between — with a short rules/explanation
-   paragraph shown once above the mode buttons). **Use in-app links to navigate
+   760px viewport width, where the game preview box should span the **full** width of the column
+   (same width as the RSVP form above/below it), not just a narrow strip — check its actual
+   bounding-box width against `.home-main`'s, since it's easy for this to silently regress back to
+   shrink-wrapped. Below that, only the admin's external "Extra Links" (Add to Calendar/Venue
+   Maps/custom links, if any) appear — there's no separate Registry/Songs/Food link row on the home
+   page itself; that navigation lives in the RSVP confirmation view's buttons and the header
+   hamburger (see 2b). "START GAME" navigates to `#/game` regardless of RSVP status (canvas inside a
+   bordered game frame, jumping straight to mode-select — no title screen in between — with a short
+   rules/explanation paragraph shown once above the mode buttons). **Use in-app links to navigate
    (click, or the hamburger), not the browser's address bar/`page.goto` in a test script** — a full
    page load resets all component state, which looks identical to a real bug (an in-progress run
    resetting) but isn't one.
@@ -28,19 +32,21 @@ npm run dev
    disabled until name + a choice are set) → confirmation view (in place of the form, still at 66%
    width) shows a tailored message and buttons into Songs/Food (attending only, respecting the
    enabled toggles) and Registry (always) — this **is** the "confirmation + do you want to request
-   songs/food" screen, there's no separate one. Reload the page — should show the confirmation
-   again, not a blank form. Query-string prefill: the query string must come *before* the hash (e.g.
-   `?name=Test&email=a@b.com#/` or the equivalent `#/rsvp` alias — `?name=...#/rsvp` also works, but
-   `#/rsvp?name=...` does **not**, since everything after `#` is the hash, not `location.search`)
-   and should pre-fill those fields when no RSVP exists yet.
+   songs/food" screen, there's no separate one, and these buttons are the **only** in-app
+   Registry/Songs/Food navigation on the home page (besides the header hamburger) — there should be
+   no second, smaller link row duplicating them further down the page. Reload the page — should show
+   the confirmation again, not a blank form. Query-string prefill: the query string must come
+   *before* the hash (e.g. `?name=Test&email=a@b.com#/` or the equivalent `#/rsvp` alias —
+   `?name=...#/rsvp` also works, but `#/rsvp?name=...` does **not**, since everything after `#` is
+   the hash, not `location.search`) and should pre-fill those fields when no RSVP exists yet.
 2b. **Gating** — before any RSVP: Registry/Songs/Food show a "Not yet!" `GateNotice` linking back to
-   the home page ("💌 Go to RSVP", `href="#/"`); the home page's page-nav pills and the hamburger's
-   items show 🔒. After RSVP: Registry unlocks (even if declined); Songs/Food additionally require
-   attending=yes. Lock icons should update **immediately** after submitting, without needing to
-   navigate elsewhere first.
+   the home page ("💌 Go to RSVP", `href="#/"`); the hamburger's items show 🔒 (the home page itself
+   has no separate locked pill row of its own — see 1 above). After RSVP: Registry unlocks (even if
+   declined); Songs/Food additionally require attending=yes. Lock icons should update **immediately**
+   after submitting, without needing to navigate elsewhere first.
 2c. **Songs/Food pages** — add/remove a song request; save food/allergy notes and see the
    confirmation line. Toggling `songsEnabled`/`foodEnabled` off in Admin's Pages section should hide
-   the corresponding page-nav pill/menu item and show a plain "not collecting this" message if
+   the corresponding hamburger menu item and show a plain "not collecting this" message if
    visited directly.
 2d. **Registry** — set a Registry URL in Admin's Pages section; verify the unlocked page's button
    opens it in a new tab (via `withProtocol()` — a bare domain gets `https://` prepended).
@@ -54,6 +60,18 @@ npm run dev
    guest and family items — hitting family (👩‍👧/👨‍👦) should pay noticeably more ($300–$500) than a
    guest (👥, $100–$300). Cycling ammo (S / ↑↓) should only ever land on cash or envelope — no third
    type.
+5b. **HUD ammo visibility** — the money (top-right) and envelope-count (below the hearts) numbers
+   should read clearly at a glance — noticeably larger than the small "which ammo is selected"
+   labels next to them — and both should turn red once low (money `< $200`, envelope `≤ 2`) the same
+   way, not just money. Spend both all the way to zero — shooting should stop entirely
+   (`use-game-state.md`'s `outOfAmmo` fast-forward kicks in), and the HUD numbers should make it obvious
+   why, without needing to guess.
+5c. **First-time ammo hint** — clear `localStorage`, then start a brand-new game (mode-select →
+   any mode): a bordered banner should appear over the top of the play field for the first several
+   seconds of Level 1 explaining cash vs. envelope ammo and how to switch, then fade out on its own.
+   Reload the page and start another game (without clearing storage again) — the banner should
+   **not** reappear, on Level 1 or any other level, however many times the game is
+   restarted/replayed in that browser afterward.
 6. **Item acquisition** — shoot item to 0 HP → popup message, item added to acquired list, side panel checkmark updates.
 7. **Income items** — shooting a guest with an envelope gives random $100–$300; family gives $300–$500.
 8. **Side panel** — right 110px shows required items with checkmarks as acquired.
