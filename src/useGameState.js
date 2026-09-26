@@ -14,6 +14,28 @@ import { LEVELS, getSpawnPool, isLevelComplete } from './levels';
 const FPS               = 60;
 const ITEM_SPAWN_FRAMES = 90;   // ~1.5 s between spawns
 
+// ── first-time ammo hint ─────────────────────────────────────────────────
+// Feedback: it wasn't clear early on when to use cash vs. envelope ammo —
+// the mode-select screen's one-time rules paragraph mentions both, but easy
+// to skim past before it matters. `AMMO_HINT_FRAMES` is how long an
+// in-gameplay reminder banner (renderer.js's `drawAmmoHint`) stays up the
+// very first time a guest ever reaches Level 1, gated by a localStorage flag
+// so it only ever shows once per browser, however many times the game is
+// restarted/replayed afterward — see the `CHOOSE_MODE`/`RESTART` handlers
+// below, the only two places a truly *fresh* run begins.
+const AMMO_HINT_KEY    = 'weddinvaders:seenAmmoHint:v1';
+const AMMO_HINT_FRAMES = 9 * FPS;
+
+function shouldShowAmmoHint() {
+  try {
+    if (localStorage.getItem(AMMO_HINT_KEY)) return false;
+    localStorage.setItem(AMMO_HINT_KEY, '1');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── helpers ────────────────────────────────────────────────────────────────
 
 function rowToY(row) {
@@ -157,6 +179,7 @@ export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null
     meetingTimer:    0,   // counts up during 'meeting' phase for animations
     slowTimer:       0,   // frames remaining of hourglass row-advance slowdown
     livesFlashTimer: 0,   // frames remaining of the HUD heart-flash after a life is lost
+    ammoHintTimer:   0,   // frames remaining of the first-time cash-vs-envelope hint banner
   };
 }
 
@@ -342,12 +365,13 @@ export function useGameState(active = true) {
       let { frame, time, money, ammo, discount, lives,
             players, bullets, items, acquiredItems,
             messages, score, spawnTimer, rowAdvanceTimer, advanceAnim,
-            currentLevel, slowTimer, livesFlashTimer } = s;
+            currentLevel, slowTimer, livesFlashTimer, ammoHintTimer } = s;
 
       frame++;
       advanceAnim     = Math.max(0, advanceAnim - 1);
       slowTimer       = Math.max(0, slowTimer - 1);
       livesFlashTimer = Math.max(0, livesFlashTimer - 1);
+      ammoHintTimer   = Math.max(0, ammoHintTimer - 1);
 
       // ── timer & row advance ────────────────────────────────────────────
       // Both the countdown clock and row-advance speed up once all required
@@ -564,6 +588,7 @@ export function useGameState(active = true) {
         advanceAnim,
         slowTimer,
         livesFlashTimer,
+        ammoHintTimer,
       };
     });
   }, []);
@@ -601,9 +626,17 @@ export function useGameState(active = true) {
       case 'START':
         setState(s => ({ ...s, phase: 'modeSelect' })); break;
       case 'CHOOSE_MODE':
-        setState({ ...getInitialState(0, action.mode, action.soloRole ?? null), phase: 'playing' }); break;
+        setState({
+          ...getInitialState(0, action.mode, action.soloRole ?? null),
+          phase: 'playing',
+          ammoHintTimer: shouldShowAmmoHint() ? AMMO_HINT_FRAMES : 0,
+        }); break;
       case 'RESTART':
-        setState(s => ({ ...getInitialState(0, s.mode, s.soloRole), phase: 'playing' })); break;
+        setState(s => ({
+          ...getInitialState(0, s.mode, s.soloRole),
+          phase: 'playing',
+          ammoHintTimer: shouldShowAmmoHint() ? AMMO_HINT_FRAMES : 0,
+        })); break;
       case 'RETRY_LEVEL':
         setState(s => ({
           ...getInitialState(s.currentLevel, s.mode, s.soloRole, s.levelStartMoney, s.levelStartEnvelopes, s.lives),
