@@ -430,9 +430,18 @@ function drawHUD(ctx, state) {
     ctx.fillRect(0, hudY, 150, HUD_HEIGHT);
   }
 
-  ctx.font = '18px Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff';
-  ctx.fillText('❤️'.repeat(lives), 10, hudY + 20);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+
+  // Top row: the two "remaining ammo" numbers, same size/font, flanking the
+  // timer — these are the numbers a player most needs to track, so they sit
+  // together and stand out from the smaller, decorative "which ammo is
+  // selected" labels on the row below (feedback: it wasn't clear how much of
+  // either was left, especially once shooting silently stops at zero of
+  // both).
+  const AMMO_FONT = 'bold 21px monospace';
+  ctx.font      = AMMO_FONT;
+  ctx.fillStyle = ammo.envelope <= 2 ? '#f44336' : '#4caf50';
+  ctx.fillText(`💌×${ammo.envelope}`, 10, hudY + 20);
 
   const mins = Math.floor(time / 60), secs = time % 60;
   ctx.font      = 'bold 20px monospace';
@@ -440,19 +449,16 @@ function drawHUD(ctx, state) {
   ctx.fillStyle = time < 20 ? '#f44336' : time < 30 ? '#ff9800' : '#fff';
   ctx.fillText(`${mins}:${String(secs).padStart(2,'0')}`, GAME_WIDTH / 2, hudY + 20);
 
-  // Both remaining-ammo readouts (money and envelopes) are the numbers a
-  // player most needs to track — sized and colored to match each other and
-  // to stand out from the smaller, decorative "which ammo is selected"
-  // labels below them (feedback: it wasn't clear how much of either was
-  // left, especially once shooting silently stops at zero of both).
-  ctx.font      = 'bold 21px monospace';
+  ctx.font      = AMMO_FONT;
   ctx.textAlign = 'right';
   ctx.fillStyle = money < 200 ? '#f44336' : '#4caf50';
   ctx.fillText(`💰 $${Math.floor(money)}`, GAME_WIDTH - 10, hudY + 20);
 
-  ctx.font = 'bold 19px monospace'; ctx.textAlign = 'left';
-  ctx.fillStyle = ammo.envelope <= 2 ? '#f44336' : '#4caf50';
-  ctx.fillText(`💌×${ammo.envelope}`, 10, hudY + 44);
+  // Bottom row: lives (moved down here, out of the ammo numbers' way) plus
+  // the small "which ammo is selected" labels.
+  ctx.font = '18px Arial'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('❤️'.repeat(lives), 10, hudY + 44);
 
   const bMeta = AMMO_META[players.bride.selectedAmmo];
   ctx.font = 'bold 13px monospace'; ctx.fillStyle = bMeta.color; ctx.textAlign = 'left';
@@ -472,6 +478,11 @@ function drawHUD(ctx, state) {
 // ── floating messages ────────────────────────────────────────────────────────
 
 function drawMessages(ctx, messages) {
+  // Same mobile-portrait scale-up as drawItem/drawPlayer (`ITEM_WIDTH` is
+  // larger there) — these per-item toasts were reported as too small on
+  // mobile; the "big" life-loss callouts already read fine at a fixed size
+  // (unscaled) and are the size the small toasts are meant to approach.
+  const s = ITEM_WIDTH / 68;
   for (const m of messages) {
     const alpha = Math.min(1, m.timer / 25);
     ctx.save();
@@ -487,7 +498,7 @@ function drawMessages(ctx, messages) {
       ctx.fillText(m.text, m.x + ITEM_WIDTH / 2, m.y);
     } else {
       const rise = (90 - m.timer) * 0.4;
-      ctx.font       = 'bold 16px monospace';
+      ctx.font       = `bold ${16 * s}px monospace`;
       ctx.shadowBlur = 6;
       ctx.fillText(m.text, m.x + ITEM_WIDTH / 2, m.y - rise);
     }
@@ -535,7 +546,7 @@ function drawAmmoHint(ctx, timer) {
   const FADE_FRAMES   = 30;
   const alpha         = Math.min(1, phaseTimer / FADE_FRAMES);
 
-  const w = GAME_WIDTH - 40, h = 64;
+  const w = GAME_WIDTH - 20, h = 92;
   const x = (GAME_WIDTH - w) / 2, y = (PLAY_HEIGHT - h) / 2;
 
   ctx.save();
@@ -547,21 +558,24 @@ function drawAmmoHint(ctx, timer) {
   ctx.lineWidth   = 1.5;
   ctx.stroke();
 
+  // Sized closer to the "big" life-loss callouts (drawMessages' `m.big`
+  // branch, `bold 22px monospace`) rather than the small HUD-label sizes it
+  // used before — feedback was that this banner's text was too small.
   ctx.textAlign = 'center';
-  ctx.font      = 'bold 13px monospace';
+  ctx.font      = 'bold 16px monospace';
   ctx.fillStyle = '#ffd700';
-  ctx.fillText('💡 New here?', GAME_WIDTH / 2, y + 20);
+  ctx.fillText('💡 New here?', GAME_WIDTH / 2, y + 26);
 
-  ctx.font      = 'bold 14px Arial';
+  ctx.font      = 'bold 20px monospace';
   ctx.fillStyle = '#fff';
   ctx.fillText(
-    inSecondPhase ? '💌 Envelope → invite guests & family' : '💵 Cash → buy wedding items',
-    GAME_WIDTH / 2, y + 40
+    inSecondPhase ? '💌 Envelope → guests & family' : '💵 Cash → buy wedding items',
+    GAME_WIDTH / 2, y + 54
   );
 
-  ctx.font      = '11px Arial';
+  ctx.font      = '14px Arial';
   ctx.fillStyle = '#ccc';
-  ctx.fillText('Switch: ↑↓ / S · or the 🔄 button', GAME_WIDTH / 2, y + 56);
+  ctx.fillText('Switch: ↑↓ / S · or the 🔄 button', GAME_WIDTH / 2, y + 78);
   ctx.restore();
 }
 
