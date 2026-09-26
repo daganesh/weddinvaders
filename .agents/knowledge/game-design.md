@@ -29,17 +29,17 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
   much to track at once, so a touch-width viewport only offers Solo. See `game-jsx.md`.
 - **Solo** — chosen at the `modeSelect` screen (Couple / Solo as Bride / Solo as Groom), reached from
   the title screen. Only the chosen role can move/shoot/cycle ammo; the other role is a parked,
-  occasionally-blinking placeholder at its starting corner (mainly for mobile, where the controls
-  are simplified to swipe-to-move, tap-canvas-to-shoot, and a single "switch ammo" button — see
-  `game-jsx.md`). **The human-controlled character always starts at the bottom row** — playing solo
-  as groom inverts which physical corner groom/bride start from (groom takes bride's usual
-  bottom-left start and shoots upward instead of down), rather than groom always starting top-right.
-  When a role ends up in the *other* role's usual slot this way, its sprite is drawn rotated 180° —
-  see `renderer.md`'s `drawPlayer` — so it visually faces the direction it's actually shooting rather
-  than the artwork's default (top-slot-facing-down) orientation. The row-advance/timer/win-lose rules
-  are otherwise **unchanged** from Couple mode — solo is simply harder because only one shooter is
-  acting against the same pace. See `use-game-state.md`'s `topRole`/`bottomRole` for how the
-  inversion is implemented without hardcoding role names into the convergence math.
+  occasionally-blinking placeholder at its own **usual** starting corner (mainly for mobile, where the
+  controls are simplified to swipe-to-move, tap-canvas-to-shoot, and a single "switch ammo" button —
+  see `game-jsx.md`). **Neither role's starting corner, facing direction, or sprite orientation ever
+  changes based on who's playing them** — groom is always top-right shooting down, bride is always
+  bottom-left shooting up, in Couple mode and both Solo variants alike; picking "Solo as Groom" only
+  changes which role responds to input, nothing about where it starts or which way it faces. (An
+  earlier version inverted groom/bride's starting corners and rotated the sprite 180° so the
+  human-controlled character always started at the bottom — feedback was that this was confusing/
+  unwanted, so it was removed; see `use-game-state.md`'s `topRole`/`bottomRole`.) The row-advance/
+  timer/win-lose rules are otherwise **unchanged** from Couple mode — solo is simply harder because
+  only one shooter is acting against the same pace.
 
 ## Players
 - **Groom** — starts top-right (row 0), moves down. Controls: ←/→ move, ↑/↓ cycle ammo, Space/Enter shoot.
@@ -47,8 +47,8 @@ where a short rules/explanation paragraph is shown once, above the mode buttons.
 - Both move one row at a time on a timed `rowAdvanceTimer`.
 - Key bindings are handled in `onKey()` / `moveX()` in [`knowledge/use-game-state.md`](use-game-state.md).
 - In Solo mode, only the chosen role's keys/taps do anything; the other role's inputs are ignored so
-  it stays parked (see "Game Modes"). The starting corner/movement direction described above is
-  Couple mode's default and Solo-as-Bride's layout — Solo-as-Groom swaps it.
+  it stays parked at its own usual corner (see "Game Modes") — the starting corner/movement direction
+  described above is the same in every mode, including Solo as Groom.
 
 ## Ammo Types
 Only two — feedback on an earlier three-ammo version (separate `invite`/`heart` types for guests vs.

@@ -7,6 +7,7 @@ import {
   ITEM_WIDTH, ITEM_HEIGHT,
   AMMO_META, AMMO_ORDER,
   WEDDING_ITEMS,
+  AMMO_HINT_PHASE_FRAMES,
 } from './constants';
 import { LEVELS } from './levels';
 import { DEFAULT_CONFIG } from './customizationStore';
@@ -85,33 +86,20 @@ function drawBackground(ctx, players, cfg) {
 
 // ── player sprites ───────────────────────────────────────────────────────────
 
-// `isTop` is the player's physical slot (top-right vs bottom-left), which in
-// solo mode may differ from `isGroom`'s role identity — used for the ammo
-// label's above/below placement, which depends on which side of the play
-// field this sprite is actually standing on. `waiting` marks the
-// non-controlled placeholder in solo mode: it plays a periodic idle "blink"
-// (a brief opacity dip, timed off `frame`) and skips the ammo label, since
-// it never has ammo selected meaningfully.
+// `isTop` is the player's physical slot (top-right vs bottom-left) — always
+// matching `isGroom` (groom is always top, bride always bottom, in both
+// Couple and Solo modes; see useGameState.js's `getInitialState`) — used for
+// the ammo label's above/below placement, which side of the sprite that
+// reads on. `waiting` marks the non-controlled placeholder in solo mode: it
+// plays a periodic idle "blink" (a brief opacity dip, timed off `frame`) and
+// skips the ammo label, since it never has ammo selected meaningfully.
 function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
   if (!player.alive) return;
   const { x, y } = player;
   const w = PLAYER_WIDTH, h = PLAYER_HEIGHT;
   const s = PLAYER_WIDTH / 62; // rescales fallback/label sizes with a larger mobile sprite
 
-  // Groom's natural home is the top slot (shooting down); bride's is the
-  // bottom slot (shooting up). Solo-as-groom inverts which role occupies
-  // which slot (see useGameState.js's getInitialState) so the human always
-  // starts at the bottom — when that happens, the sprite is drawn upside
-  // down (rotated 180°) so it visually faces the direction it's actually
-  // shooting, instead of the artwork's default orientation.
-  const inverted = isGroom !== isTop;
-
   ctx.save();
-  if (inverted) {
-    ctx.translate(x + w / 2, y + h / 2);
-    ctx.rotate(Math.PI);
-    ctx.translate(-(x + w / 2), -(y + h / 2));
-  }
   if (waiting && frame % 200 < 10) ctx.globalAlpha = 0.35;
   if (img) {
     drawImageContain(ctx, img, x, y, w, h);
@@ -129,7 +117,7 @@ function drawPlayer(ctx, player, img, isGroom, isTop, waiting, frame, cfg) {
 
   // Ammo label: below sprite for the top slot, above sprite for the bottom
   // slot — slightly larger than before so how much ammo is selected/left
-  // reads at a glance (never rotated with the sprite; it's a UI label).
+  // reads at a glance.
   const ammoMeta = AMMO_META[player.selectedAmmo];
   ctx.font      = `${16 * s}px monospace`;
   ctx.textAlign = 'center';
@@ -528,18 +516,27 @@ function drawAdvanceAnim(ctx, anim) {
 
 // ── first-time ammo hint ────────────────────────────────────────────────────
 
-// A one-time reminder banner (see useGameState.js's `shouldShowAmmoHint()`)
-// shown over the first several seconds of a guest's very first Level 1 —
-// feedback was that it wasn't clear early on when to use cash vs. envelope
-// ammo. Drawn as an overlay on top of normal gameplay (not a blocking
-// screen — the level keeps running underneath), fading out over its last
-// second rather than cutting off abruptly.
+// A one-time reminder shown over a guest's very first Level 1 (see
+// useGameState.js's `shouldShowAmmoHint()`) — feedback was that it wasn't
+// clear early on when to use cash vs. envelope ammo, and that an earlier,
+// longer version of this banner (four lines, pinned to the very top of the
+// canvas) "was not visible well". Now two short tips shown in sequence
+// instead of one longer one — first cash, then envelope — each
+// `AMMO_HINT_PHASE_FRAMES` long, centered in the middle of the play field
+// (not the top edge, which can be easy to miss/get cropped by a phone's own
+// browser chrome) so it's hard to miss regardless of where the action is.
+// Drawn as an overlay on top of normal gameplay (not a blocking screen — the
+// level keeps running underneath), fading out at the end of each phase
+// rather than cutting off abruptly.
 function drawAmmoHint(ctx, timer) {
   if (timer <= 0) return;
-  const FADE_FRAMES = 60;
-  const alpha = Math.min(1, timer / FADE_FRAMES);
+  const inSecondPhase = timer <= AMMO_HINT_PHASE_FRAMES;
+  const phaseTimer    = inSecondPhase ? timer : timer - AMMO_HINT_PHASE_FRAMES;
+  const FADE_FRAMES   = 30;
+  const alpha         = Math.min(1, phaseTimer / FADE_FRAMES);
 
-  const x = 16, y = 10, w = GAME_WIDTH - 32, h = 92;
+  const w = GAME_WIDTH - 40, h = 64;
+  const x = (GAME_WIDTH - w) / 2, y = (PLAY_HEIGHT - h) / 2;
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -553,16 +550,18 @@ function drawAmmoHint(ctx, timer) {
   ctx.textAlign = 'center';
   ctx.font      = 'bold 13px monospace';
   ctx.fillStyle = '#ffd700';
-  ctx.fillText('💡 New here? Two ammo types:', GAME_WIDTH / 2, y + 20);
+  ctx.fillText('💡 New here?', GAME_WIDTH / 2, y + 20);
 
-  ctx.font      = '12px Arial';
+  ctx.font      = 'bold 14px Arial';
   ctx.fillStyle = '#fff';
-  ctx.fillText('💵 Cash → buy wedding items', GAME_WIDTH / 2, y + 40);
-  ctx.fillText('💌 Envelope → invite guests & family', GAME_WIDTH / 2, y + 58);
+  ctx.fillText(
+    inSecondPhase ? '💌 Envelope → invite guests & family' : '💵 Cash → buy wedding items',
+    GAME_WIDTH / 2, y + 40
+  );
 
   ctx.font      = '11px Arial';
   ctx.fillStyle = '#ccc';
-  ctx.fillText('Switch anytime: ↑↓ / S · or the 🔄 button', GAME_WIDTH / 2, y + 78);
+  ctx.fillText('Switch: ↑↓ / S · or the 🔄 button', GAME_WIDTH / 2, y + 56);
   ctx.restore();
 }
 
