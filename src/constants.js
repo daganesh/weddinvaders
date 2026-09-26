@@ -109,3 +109,8 @@ export const ROW_ADVANCE_INTERVAL  = 18;  // seconds between each row advance
 export const ROW_ADVANCE_SPEEDUP   = 2.5; // multiplier (row-advance *and* the time countdown) once all required items are acquired
 export const HOURGLASS_SLOW_SECONDS = 15; // real seconds the hourglass item slows row-advance for
 export const NO_AMMO_FASTFORWARD    = 10; // speed multiplier once cash and envelopes are both exhausted
+
+// First-time ammo hint (useGameState.js's ammoHintTimer / renderer.js's drawAmmoHint): shown as two
+// short tips in sequence (cash, then envelope) rather than one longer banner — each stays up this
+// many frames at 60fps (~5s) before the next (or, for the second tip, before it fades out for good).
+export const AMMO_HINT_PHASE_FRAMES = 5 * 60;

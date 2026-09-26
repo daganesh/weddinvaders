@@ -62,15 +62,11 @@ export default function RsvpPage({ config }) {
         )}
         <p className="page-lead">Thanks for letting us know!</p>
 
-        {response.attending && (
-          <div className="choice-row">
-            {config.text.songsEnabled && (
-              <a className="big-btn" href="#/songs">🎵 Request Songs</a>
-            )}
-            {config.text.foodEnabled && (
-              <a className="big-btn" href="#/food">🍽️ Food Requests</a>
-            )}
-          </div>
+        {response.attending && config.text.songsEnabled && (
+          <a className="big-btn" href="#/songs">🎵 Request Songs</a>
+        )}
+        {response.attending && config.text.foodEnabled && (
+          <a className="big-btn" href="#/food">🍽️ Food Requests</a>
         )}
         <a className="big-btn" href="#/registry">🎁 Visit Our Registry</a>
 

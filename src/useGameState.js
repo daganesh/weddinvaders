@@ -8,6 +8,7 @@ import {
   ITEM_WIDTH, ITEM_HEIGHT, MAX_CONCURRENT_ITEMS,
   AMMO_DAMAGE, AMMO_ORDER,
   ROW_ADVANCE_SPEEDUP, HOURGLASS_SLOW_SECONDS, NO_AMMO_FASTFORWARD,
+  AMMO_HINT_PHASE_FRAMES,
 } from './constants';
 import { LEVELS, getSpawnPool, isLevelComplete } from './levels';
 
@@ -17,14 +18,15 @@ const ITEM_SPAWN_FRAMES = 90;   // ~1.5 s between spawns
 // ── first-time ammo hint ─────────────────────────────────────────────────
 // Feedback: it wasn't clear early on when to use cash vs. envelope ammo —
 // the mode-select screen's one-time rules paragraph mentions both, but easy
-// to skim past before it matters. `AMMO_HINT_FRAMES` is how long an
-// in-gameplay reminder banner (renderer.js's `drawAmmoHint`) stays up the
-// very first time a guest ever reaches Level 1, gated by a localStorage flag
-// so it only ever shows once per browser, however many times the game is
-// restarted/replayed afterward — see the `CHOOSE_MODE`/`RESTART` handlers
-// below, the only two places a truly *fresh* run begins.
+// to skim past before it matters. `ammoHintTimer` counts down from two
+// `AMMO_HINT_PHASE_FRAMES`-long phases (renderer.js's `drawAmmoHint` shows a
+// short cash tip, then a short envelope tip) the very first time a guest
+// ever reaches Level 1, gated by a localStorage flag so it only ever shows
+// once per browser, however many times the game is restarted/replayed
+// afterward — see the `CHOOSE_MODE`/`RESTART` handlers below, the only two
+// places a truly *fresh* run begins.
 const AMMO_HINT_KEY    = 'weddinvaders:seenAmmoHint:v1';
-const AMMO_HINT_FRAMES = 9 * FPS;
+const AMMO_HINT_FRAMES = 2 * AMMO_HINT_PHASE_FRAMES;
 
 function shouldShowAmmoHint() {
   try {
@@ -43,9 +45,10 @@ function rowToY(row) {
 }
 
 // `isTop` picks the physical starting corner (top-right, moving down vs.
-// bottom-left, moving up) independent of role identity — in solo mode
-// playing as groom, the human always starts at the bottom, so groom takes
-// the "isTop = false" slot instead of its couple-mode default.
+// bottom-left, moving up) — always `true` for groom and `false` for bride,
+// in both Couple and Solo modes (see `getInitialState`'s `topRole`/
+// `bottomRole`), so this is really just "is this the groom's row/x" spelled
+// generically rather than a real per-call choice today.
 function makePlayer(role, isTop) {
   const row = isTop ? GROOM_START_ROW : BRIDE_START_ROW;
   return {
@@ -121,11 +124,15 @@ function spawnItem(topRow, bottomRow, level, acquiredItems = [], elapsedFraction
 
 // `mode` is 'couple' (both players controllable, groom top/bride bottom as
 // always) or 'solo' (only `soloRole` is controllable; the other role is a
-// parked, blinking placeholder). In solo mode the human always starts at the
-// bottom row, so soloRole='groom' swaps which role occupies the top/bottom
-// starting slot; row-advance/meeting logic below reads `topRole`/`bottomRole`
-// rather than hardcoding groom=top, so this inversion doesn't have to touch
-// the convergence math itself.
+// parked, blinking placeholder in its own natural slot). Groom is always
+// `topRole` and bride always `bottomRole`, in both modes — playing solo as
+// groom does **not** move the human to the bottom row or rotate anything;
+// it only changes which role responds to input (see `groomControllable`/
+// `brideControllable` below), same starting corner and facing direction
+// either way. `topRole`/`bottomRole` themselves stay a real (if now
+// constant) abstraction rather than hardcoded `'groom'`/`'bride'` literals,
+// since row-advance/meeting/spawn-bounds/bullet-direction below all read
+// through them.
 //
 // `carryOverMoney`/`carryOverEnvelopes`, when given, are ADDED to
 // `level.money`/`level.envelopes` rather than replaced by them — neither
@@ -149,9 +156,8 @@ function spawnItem(topRow, bottomRow, level, acquiredItems = [], elapsedFraction
 export function getInitialState(levelIndex = 0, mode = 'couple', soloRole = null, carryOverMoney, carryOverEnvelopes, carryOverLives) {
   const idx   = Math.min(levelIndex, LEVELS.length - 1);
   const level = LEVELS[idx];
-  const invert  = mode === 'solo' && soloRole === 'groom';
-  const topRole    = invert ? 'bride' : 'groom';
-  const bottomRole = invert ? 'groom' : 'bride';
+  const topRole    = 'groom';
+  const bottomRole = 'bride';
   return {
     phase:           'title',
     mode,
@@ -227,8 +233,7 @@ export function useGameState(active = true) {
       if (ammoType === 'envelope' && s.ammo.envelope <= 0)  return s;
 
       // Direction depends on which physical slot this role occupies (top
-      // shoots down, bottom shoots up), not the role identity itself — in
-      // solo-as-groom, groom occupies the bottom slot instead of its usual top.
+      // shoots down, bottom shoots up) — always groom=top, bride=bottom.
       const isTop = role === s.topRole;
       const vy = isTop ? BULLET_SPEED : -BULLET_SPEED;
       const bx = player.x + PLAYER_WIDTH  / 2 - BULLET_WIDTH  / 2;

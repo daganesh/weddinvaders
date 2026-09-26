@@ -120,13 +120,26 @@
   min-width: 48px;
 }
 
-.big-btn {
-  display: inline-block;
+/* `display: block` (not `inline-block`) so every `.big-btn` — whether an
+   `<a>` (Registry/Songs/Food) or a `<button>` (Change my RSVP, form
+   submit) — becomes a full-width row of its flex-column parent (`.page-card`
+   /`.choice-row` items aside) with identical width; identical font/padding
+   across all of them keeps the height identical too, so a stack of these
+   reads as one consistent set of buttons rather than a mix of sizes. The
+   default border is transparent rather than `none` — same 2px reserved
+   either way (with `box-sizing: border-box`) — so `.big-btn-secondary`'s
+   visible 2px border below doesn't make it a few pixels taller than the rest.
+*/
+.big-btn,
+.big-btn:visited {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   font-size: 20px;
   font-weight: bold;
   padding: 18px 28px;
   border-radius: 16px;
-  border: none;
+  border: 2px solid transparent;
   cursor: pointer;
   background: var(--wv-accent-color, #ffd700);
   color: #1a1a1a;
