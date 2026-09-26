@@ -64,19 +64,26 @@ npm run dev
    guest and family items — hitting family (👩‍👧/👨‍👦) should pay noticeably more ($300–$500) than a
    guest (👥, $100–$300). Cycling ammo (S / ↑↓) should only ever land on cash or envelope — no third
    type.
-5b. **HUD ammo visibility** — the money (top-right) and envelope-count (below the hearts) numbers
-   should read clearly at a glance — noticeably larger than the small "which ammo is selected"
-   labels next to them — and both should turn red once low (money `< $200`, envelope `≤ 2`) the same
-   way, not just money. Spend both all the way to zero — shooting should stop entirely
-   (`use-game-state.md`'s `outOfAmmo` fast-forward kicks in), and the HUD numbers should make it obvious
-   why, without needing to guess.
+5b. **HUD layout and ammo visibility** — the HUD's top row should show 💌 envelope count (left) and
+   💰 money (right) flanking the timer, in the **same font and size** as each other — noticeably
+   larger than the small "which ammo is selected" labels — and both should turn red once low (money
+   `< $200`, envelope `≤ 2`) the same way, not just money. The ❤️ lives readout should be on the
+   **bottom** row (left), not the top. Spend both ammo types all the way to zero — shooting should
+   stop entirely (`use-game-state.md`'s `outOfAmmo` fast-forward kicks in), and the HUD numbers
+   should make it obvious why, without needing to guess.
 5c. **First-time ammo hint** — clear `localStorage`, then start a brand-new game (mode-select →
    any mode): a bordered banner should appear **vertically centered in the play field** (not pinned
-   to the very top) for the first several seconds of Level 1, showing a short cash tip ("💵 Cash →
-   buy wedding items"), then — after a few seconds — swap to an equally short envelope tip ("💌
-   Envelope → invite guests & family"), then fade out for good. Reload the page and start another
+   to the very top), with clearly large text (close in size to the floating "−1 life"/"got away"
+   callouts, not small HUD-label-sized text), for the first several seconds of Level 1, showing a
+   short cash tip ("💵 Cash → buy wedding items"), then — after a few seconds — swap to an equally
+   short envelope tip ("💌 Envelope → guests & family"), then fade out for good. On a narrow mobile
+   viewport, check the text doesn't overflow its bordered box. Reload the page and start another
    game (without clearing storage again) — the banner should **not** reappear, on Level 1 or any
    other level, however many times the game is restarted/replayed in that browser afterward.
+5d. **Floating item toasts on mobile** — on a narrow/mobile-portrait viewport, shoot an item to
+   acquire it or hit a guest/family member for income — the floating "+$150"/"+250pts"-style toast
+   that pops up should read at a clearly legible size (scaled up along with the larger mobile item
+   cards/sprites — `constants.md`'s `ITEM_WIDTH`), not the same small size as on desktop.
 6. **Item acquisition** — shoot item to 0 HP → popup message, item added to acquired list, side panel checkmark updates.
 7. **Income items** — shooting a guest with an envelope gives random $100–$300; family gives $300–$500.
 8. **Side panel** — right 110px shows required items with checkmarks as acquired.
