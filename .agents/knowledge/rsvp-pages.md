@@ -5,7 +5,13 @@
 `src/PageHeader.jsx`, `src/GateNotice.jsx`, `src/GameTeaser.jsx` (+ `GameTeaser.css`), plus their
 shared store/hook: `src/rsvpStore.js`, `src/useRsvpStatus.js`. Shared look for the form pages lives
 in `src/PagesShared.css` (`.page-card`, `.big-btn`, `.choice-row`/`.choice-btn`, `.stepper`,
-`.field-label`, `.locked-notice`).
+`.field-label`, `.locked-notice`). `.big-btn` (an `<a>` or `<button>`, styled identically either way)
+is `display: block; width: 100%` with a transparent 2px default border — not `inline-block`/auto-width
+or `border: none` — so a stack of them (as in `RsvpPage`'s confirmation view) is always exactly the
+same width and height as each other, including `.big-btn-secondary` (whose only visible difference is
+color, not a border that would otherwise add a few extra pixels of height); `.big-btn:visited` is
+pinned to the same text color as the base rule too, so a genuinely-visited link (e.g. Registry, once
+tapped) doesn't drift to the browser's default purple/blue visited-link color.
 
 ## Purpose
 Together these turn RSVP/Registry/Songs/Food from external links to bundled static demo pages into
@@ -31,7 +37,7 @@ read/written through small guarded functions) but for the *guest's* own response
   "start over" affordance).
 
 ### Reactivity: `notify()`/`subscribeRsvp()` + `useRsvpStatus.js`
-Several components (`PageHeader`'s hamburger, `InviteScreen`'s page-links row,
+Several components (`PageHeader`'s hamburger, `RsvpPage`'s own confirmation-view buttons,
 `RegistryPage`/`SongsPage`/`FoodPage`'s own gate) read this store during render. That's enough when
 the read happens because of navigation (arriving at a page always re-renders it), but not when a
 *sibling* needs to react to a change — e.g. `RsvpPage` calling `saveRsvpResponse()` doesn't itself
@@ -73,8 +79,14 @@ component itself is otherwise unchanged and takes no page-specific props beyond 
   `saveRsvpResponse(draft)` and switches to the confirmation view, which shows a tailored heading
   (attending vs. not), and — only when attending — buttons into Songs/Food (each gated on
   `config.text.songsEnabled`/`foodEnabled`) plus an always-shown Registry button (attending isn't
-  required for that one). This confirmation view **is** the "confirmation + do you want to request
-  songs/food" screen a guest sees right after submitting — there's no separate screen for it.
+  required for that one) and "Change my RSVP". This confirmation view **is** the "confirmation + do
+  you want to request songs/food" screen a guest sees right after submitting — there's no separate
+  screen for it, and it's also the **only** in-app Registry/Songs/Food navigation on the home page
+  (besides the header hamburger) — `InviteScreen.jsx` doesn't render a second copy of these links
+  itself. Songs/Food/Registry/Change-RSVP are four independent `.big-btn` siblings (not a `.choice-row`
+  pairing any of them side-by-side) so all four render as one uniform, full-width stack — see
+  `PagesShared.css`'s `.big-btn` below for how that's enforced regardless of whether an individual
+  button happens to be conditionally rendered (e.g. Songs/Food disabled in Admin).
 
 ## `GameTeaser.jsx`
 `InviteScreen.jsx`'s `.home-side` column (~33% width, next to `RsvpPage` — see above). A small,

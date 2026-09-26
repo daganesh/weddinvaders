@@ -31,12 +31,16 @@ npm run dev
    dropdown) → guest-count +/- stepper appears only when attending → submit ("💌 SEND WITH LOVE",
    disabled until name + a choice are set) → confirmation view (in place of the form, still at 66%
    width) shows a tailored message and buttons into Songs/Food (attending only, respecting the
-   enabled toggles) and Registry (always) — this **is** the "confirmation + do you want to request
-   songs/food" screen, there's no separate one, and these buttons are the **only** in-app
-   Registry/Songs/Food navigation on the home page (besides the header hamburger) — there should be
-   no second, smaller link row duplicating them further down the page. Reload the page — should show
-   the confirmation again, not a blank form. Query-string prefill: the query string must come
-   *before* the hash (e.g. `?name=Test&email=a@b.com#/` or the equivalent `#/rsvp` alias —
+   enabled toggles), Registry (always), and "Change my RSVP" — this **is** the "confirmation + do you
+   want to request songs/food" screen, there's no separate one, and these buttons are the **only**
+   in-app Registry/Songs/Food navigation on the home page (besides the header hamburger) — there
+   should be no second, smaller link row duplicating them further down the page. All of these buttons
+   should look like one uniform stack — same width, same height (check via the browser inspector or a
+   bounding-box comparison if unsure; a few px of height difference from a button's own border is a
+   regression, see `PagesShared.css`'s `.big-btn`), not a mix of full-width and side-by-side-halved
+   buttons. Reload the page — should show the confirmation again, not a blank form. Query-string
+   prefill: the query string must come *before* the hash (e.g. `?name=Test&email=a@b.com#/` or the
+   equivalent `#/rsvp` alias —
    `?name=...#/rsvp` also works, but `#/rsvp?name=...` does **not**, since everything after `#` is
    the hash, not `location.search`) and should pre-fill those fields when no RSVP exists yet.
 2b. **Gating** — before any RSVP: Registry/Songs/Food show a "Not yet!" `GateNotice` linking back to
@@ -67,11 +71,12 @@ npm run dev
    (`use-game-state.md`'s `outOfAmmo` fast-forward kicks in), and the HUD numbers should make it obvious
    why, without needing to guess.
 5c. **First-time ammo hint** — clear `localStorage`, then start a brand-new game (mode-select →
-   any mode): a bordered banner should appear over the top of the play field for the first several
-   seconds of Level 1 explaining cash vs. envelope ammo and how to switch, then fade out on its own.
-   Reload the page and start another game (without clearing storage again) — the banner should
-   **not** reappear, on Level 1 or any other level, however many times the game is
-   restarted/replayed in that browser afterward.
+   any mode): a bordered banner should appear **vertically centered in the play field** (not pinned
+   to the very top) for the first several seconds of Level 1, showing a short cash tip ("💵 Cash →
+   buy wedding items"), then — after a few seconds — swap to an equally short envelope tip ("💌
+   Envelope → invite guests & family"), then fade out for good. Reload the page and start another
+   game (without clearing storage again) — the banner should **not** reappear, on Level 1 or any
+   other level, however many times the game is restarted/replayed in that browser afterward.
 6. **Item acquisition** — shoot item to 0 HP → popup message, item added to acquired list, side panel checkmark updates.
 7. **Income items** — shooting a guest with an envelope gives random $100–$300; family gives $300–$500.
 8. **Side panel** — right 110px shows required items with checkmarks as acquired.
@@ -96,10 +101,11 @@ npm run dev
     "⏩ Skip" button should appear next to "🔄 Switch Ammo" once required items are done (and not
     before), doing the same thing. The hint text ("Swipe canvas to move · Tap to shoot") should sit
     *below* that button row, not above it.
-11. **Sprite rotation in solo-as-groom** — choose "Solo as Groom": groom should start at the
-    **bottom-left** (bride's usual corner) with its sprite rotated 180° from its normal top-slot
-    orientation; the parked bride placeholder at top-right stays in its normal (non-rotated)
-    orientation. Solo-as-Bride and Couple mode should look exactly as before (no rotation).
+11. **No orientation flip in solo-as-groom** — choose "Solo as Groom": the controllable groom sprite
+    should still start at its **usual top-right corner**, facing/shooting down, exactly like Couple
+    mode and Solo as Bride — not moved to the bottom-left or rotated. The parked bride placeholder
+    should sit at the bottom-left the whole time. (An earlier version inverted this so the
+    human-controlled character always started at the bottom; that was reverted per feedback.)
 12. **Game over** — lose all lives → lost overlay → click to restart (this resets money/envelopes to
     a fresh Level 1 start, unlike advancing to a next level, which carries the balance forward).
 12b. **Life-loss feedback** — get hit by a mine (Level 4+): a big, screen-centered "💣 TRAP! −1 life"

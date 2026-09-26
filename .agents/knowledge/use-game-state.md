@@ -31,15 +31,20 @@ and "Level failure & retry" below for the 6th.
 ### Solo mode: `topRole`/`bottomRole`
 `mode` (`'couple'`/`'solo'`) and `soloRole` (`'bride'`/`'groom'`/`null`) are stored in state and
 carried through every level/restart transition (`getInitialState`'s callers all pass `s.mode,
-s.soloRole` through — see `handleAction`/`onKey` below). Rather than hardcoding "groom is always the
-top-right mover, bride is always the bottom-left mover" (true in Couple mode and Solo-as-Bride),
-`getInitialState` also computes `topRole`/`bottomRole` — swapped to `bride`/`groom` when
-`soloRole === 'groom'`, so the human always starts at the bottom regardless of which character they
-picked. Every place that used to read `players.groom`/`players.bride` positionally (row-advance,
-the meeting check, `spawnItem`'s row bounds, the `N`-key fast-forward, and `shoot()`'s bullet
-direction/spawn side) now reads `players[topRole]`/`players[bottomRole]` instead, so the inversion
-doesn't require special-casing groom vs. bride anywhere in that math — see `renderer.md` for the
-rendering-side equivalent (`isTop` passed to `drawPlayer`).
+s.soloRole` through — see `handleAction`/`onKey` below). `getInitialState` also sets `topRole`/
+`bottomRole` — always `'groom'`/`'bride'` respectively, in every mode, **not** swapped based on
+`soloRole` — groom is always the top-right mover, bride always the bottom-left mover, regardless of
+who the human is controlling; picking "Solo as Groom" only changes which role responds to input, not
+where either one starts or which way it faces. (An earlier version swapped `topRole`/`bottomRole` to
+`'bride'`/`'groom'` when `soloRole === 'groom'`, so the human always started at the bottom row and the
+groom sprite was drawn rotated 180° to face the direction it was actually shooting — feedback was that
+this flip was confusing/unwanted, so it was removed; `topRole`/`bottomRole` are effectively constants
+today, but kept as real fields rather than hardcoded literals since every place that reads
+`players.groom`/`players.bride` positionally — row-advance, the meeting check, `spawnItem`'s row
+bounds, the `N`-key fast-forward, and `shoot()`'s bullet direction/spawn side — reads
+`players[topRole]`/`players[bottomRole]` instead, which stays correct either way without
+special-casing groom vs. bride in that math.) See `renderer.md` for the rendering-side equivalent
+(`isTop` passed to `drawPlayer`, now always equal to `isGroom`).
 
 ## Key Surface
 | Export / function | Line | Purpose |
@@ -108,14 +113,20 @@ life was lost, because none was.
 
 ### First-time ammo hint
 `shouldShowAmmoHint()` — checks `localStorage`'s `weddinvaders:seenAmmoHint:v1` flag; if unset, sets
-it and returns `true`, otherwise returns `false` — gates a one-time in-gameplay reminder banner
+it and returns `true`, otherwise returns `false` — gates a one-time in-gameplay reminder
 (`renderer.js`'s `drawAmmoHint`) explaining cash-vs-envelope ammo. Feedback was that it wasn't clear
 early on which ammo to use when, and the mode-select screen's existing one-time rules paragraph
-(`Game.jsx`'s `.mode-select-rules`) was easy to skim past before it mattered.
+(`Game.jsx`'s `.mode-select-rules`) was easy to skim past before it mattered. A first version was one
+longer banner pinned to the top of the canvas; further feedback ("not visible well", suggesting
+shorter text shown twice) reshaped it into two short tips shown in sequence — cash, then envelope —
+vertically centered in the play field instead of pinned to the top edge; see `renderer.md`'s
+`drawAmmoHint` for the split. `ammoHintTimer` is just one countdown either way — `AMMO_HINT_FRAMES`
+(`2 * AMMO_HINT_PHASE_FRAMES`, `constants.js`) down to `0` — `renderer.js` alone decides which of the
+two tips is showing from how much of that total remains.
 
 Only `CHOOSE_MODE` and `RESTART` — the two `handleAction` cases where a truly *fresh* run begins —
-call `shouldShowAmmoHint()` and set the result (as `AMMO_HINT_FRAMES`, 9 real seconds, or `0`) onto
-`ammoHintTimer` in the state they build. This is deliberately **not** done inside `getInitialState`
+call `shouldShowAmmoHint()` and set the result (as `AMMO_HINT_FRAMES` or `0`) onto `ammoHintTimer` in
+the state they build. This is deliberately **not** done inside `getInitialState`
 itself: that function also runs for the hook's very first, throwaway placeholder state (`useRef(
 getInitialState())`, before the player has even reached mode-select) and for every level-advance/
 retry — baking the check in there would burn the "seen" flag on that placeholder call before a first
